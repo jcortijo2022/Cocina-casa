@@ -47,24 +47,25 @@ function getWeekDates(offset=0){
 }
 
 function guessCategory(name){
-  const n=name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+  const n=name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim();
+  // Fiambres y embutidos - antes que carnes para no confundir
+  if(/jamon (york|cocido|dulce|serrano|iberico|pata negra)|salchichon|fuet|mortadela|chopped|pavo (fiambre|cocido)|pechuga (pavo|pollo) (fiambre|cocida)|fiambre|embutido|sobrasada|lomo embuchado|cecina|bresaola|salami|pepperoni/.test(n))return"fiambres";
   // Carnes
-  if(/jamon york|jamon serrano|salchichon|fuet|mortadela|chopped|pavo fiambre|pechuga fiambre|fiambre|embutido/.test(n))return"fiambres";
-  if(/pollo|carne|cerdo|ternera|jamon|chorizo|morcilla|panceta|costill|costilla|buey|cordero|pavo|pato|conejo|pechuga|salchich|bacon|butifarra|longaniza|filete|magro|lomo|solomillo|codillo|carrillada|secreto iberico|pluma|presa|cabrito|liebre|perdiz|codorniz|venado|res/.test(n))return"carnes";
-  // Pescados
-  if(/pescado|atun|salmon|merluza|mejillon|gamba|marisco|calamar|sepia|bacalao|sardina|boqueron|rape|lubina|dorada|langostino|chirla|almeja|berberecho|navaja|ostra|pulpo|jibia|choco|lenguado|rodaballo|trucha|boquerón|anchoa|caballa|jurel|emperador/.test(n))return"pescados";
-  // Verduras - lista muy amplia
-  if(/tomate|cebolla|ajo|pimiento|patata|papa|zanahoria|lechuga|espinaca|berenjena|calabacin|puerro|apio|pepino|brocoli|coliflor|alcachofa|judia verde|judias verdes|acelga|nabo|rabano|champin|champinon|seta|calabaza|esparrago|guisante|habas|pak choi|apio|boniato|batata|nabo|col|repollo|kale|canónigos|rucola|endivia|escarola|pimiento verde|pimiento rojo|pimiento amarillo|cebolleta|cebollino|perejil|albahaca|cilantro|menta|hierbabuena|romero|tomillo/.test(n))return"verduras";
+  if(/pollo|carne (de |picada|molida)?|cerdo|ternera|jamon|chorizo|morcilla|panceta|costill|buey|cordero|pavo|pato|conejo|pechuga|salchicha|bacon|butifarra|longaniza|filete|magro|lomo|solomillo|codillo|carrillada|secreto|pluma iberic|cabrito|liebre|perdiz|codorniz|venado|res |chuleta|costillar|albondiga|hamburguesa/.test(n))return"carnes";
+  // Pescados y mariscos
+  if(/pescado|atun|salmon|merluza|mejillon|gamba|marisco|calamar|sepia|bacalao|sardina|boqueron|rape|lubina|dorada|langostino|chirla|almeja|berberecho|navaja|ostra|pulpo|jibia|choco|lenguado|rodaballo|trucha|anchoa|caballa|jurel|emperador|surimi|langosta|bogavante|centollo|nécora|vieira/.test(n))return"pescados";
+  // Verduras y hortalizas - lista muy amplia
+  if(/tomate|cebolla|ajo|pimiento|patata|papa|zanahoria|lechuga|espinaca|berenjena|calabacin|puerro|apio|pepino|brocoli|coliflor|alcachofa|judia verde|judias verdes|acelga|nabo|rabano|champin|champinon|seta|portobello|shiitake|calabaza|esparrago|guisante|haba|pak choi|boniato|batata|col |repollo|kale|canonigo|rucola|endivia|escarola|cebolleta|cebollino|perejil fresco|albahaca fresca|cilantro fresco|menta fresca|hierbabuena|romero fresco|tomillo fresco|verdura|hortaliza|berro|hinojo fresco|apio fresco|maiz dulce|elote|pimiento morrón/.test(n))return"verduras";
   // Frutas
-  if(/manzana|naranja|limon|platano|fresa|uva|pera|melocoton|albaricoque|cereza|sandia|melon|kiwi|mango|pina|fruta|frutos rojos|frambuesa|mora|arandano|granada|higo|datil|ciruela|pomelo|mandarina|lima|coco|papaya/.test(n))return"frutas";
-  // Lacteos
-  if(/leche|queso|yogur|nata|mantequilla|huevo|crema|requeson|mozzarella|parmesano|ricotta|mascarpone|burgos|manchego|brie|camembert|roquefort|gorgonzola|lacton|lacteo|feta/.test(n))return"lacteos";
+  if(/manzana|naranja|limon|platano|fresa|uva|pera|melocoton|albaricoque|cereza|sandia|melon|kiwi|mango|pina|fruta|frutos rojos|frambuesa|mora|arandano|granada|higo|datil|ciruela|pomelo|mandarina|lima|coco|papaya|aguacate|fruto seco|almendra|nuez|pistacho|anacardo|avellana|cacahuete/.test(n))return"frutas";
+  // Lacteos y huevos
+  if(/leche|queso|yogur|nata|mantequilla|huevo|crema (de leche|agria)|requeson|mozzarella|parmesano|ricotta|mascarpone|burgos|manchego|brie|camembert|roquefort|gorgonzola|feta|lacteo|nata montada|creme fraiche/.test(n))return"lacteos";
   // Cereales y legumbres
-  if(/arroz|pasta|fideo|garbanzo|lenteja|alubia|harina|pan|maiz|cereal|quinoa|espagueti|macarron|tallarín|lasana|cuscus|bulgur|avena|trigo|centeno|cebada|mijo|amaranto|tapioca|polenta|semola/.test(n))return"cereales";
-  // Conservas
-  if(/tomate frito|salsa|conserva|lata|bote|aceitunas|alcaparra|pepinillo|atun lata|mejillones lata|berberecho lata|anchoa lata|caldo|concentrado|sofrito|pisto/.test(n))return"conservas";
+  if(/arroz|pasta|fideo|espagueti|macarron|tallar|lasana|canelones|cuscus|bulgur|avena|trigo|centeno|cebada|mijo|amaranto|tapioca|polenta|semola|pan |harina|garbanzo|lenteja|alubia|judion|judia (seca|pinta|blanca)|maiz|cereal|quinoa/.test(n))return"cereales";
+  // Conservas y salsas
+  if(/caldo (de |vegetal|pollo|carne|pescado|marisco)|tomate frito|salsa (de tomate|bechamel|carbonara|boloñesa|pesto|soja|worcestershire|tabasco|barbacoa|agridulce)|conserva|lata de|bote de|aceitunas|alcaparra|pepinillo|atun (en lata|enlatado)|mejillones (en lata|escabeche)|concentrado|sofrito|pisto|caldo concentrado/.test(n))return"conservas";
   // Especias y condimentos
-  if(/sal |pimienta|azafran|colorante|oregano|tomillo|romero|laurel|comino|pimenton|curry|aceite|vinagre|canela|nuez moscada|clavo|cardamomo|especias|condimento|mostaza|ketchup|mayonesa|soja|tabasco|worcestershire|ras el hanout|curcuma|jengibre|cilantro molido|cayena|guindilla|páprika|anis|hinojo/.test(n))return"especias";
+  if(/sal|pimienta|azafran|colorante|oregano|tomillo|romero|laurel|comino|pimenton|curry|aceite (de oliva|vegetal|girasol)?|vinagre|canela|nuez moscada|clavo|cardamomo|especias|condimento|mostaza|ketchup|mayonesa|soja|tabasco|worcestershire|ras el hanout|curcuma|jengibre|cilantro (molido|en polvo)|cayena|guindilla|paprika|anis|hinojo seco|eneldo|estragón|mejorana|hierbas|aliño/.test(n))return"especias";
   return"otros";
 }
 
@@ -163,7 +164,7 @@ function AddRecipeModal({open,onClose,onAdd,apiKey,onNeedKey}){
     setLoading(false);
   }
 
-  async function importByUrl(urlVal){
+  async function importByUrl(urlVal,photoDataUrl=null){
     if(!apiKey){onNeedKey();return;}
     setLoading(true);setError("");
     try{
@@ -171,6 +172,7 @@ function AddRecipeModal({open,onClose,onAdd,apiKey,onNeedKey}){
       const data=await r.json();
       if(!r.ok)throw new Error(data.error||"Error del servidor");
       const finalImage=data.image==="USAR_FOTO_SUBIDA"?(photoDataUrl||""): (data.image||photoDataUrl||"");
+      const finalImage2 = data.image || photoDataUrl || "";
       onAdd({id:Date.now(),title:data.title||"Receta",description:data.description||"",image:finalImage,mealType:MEAL_TYPES.includes(data.mealType)?data.mealType:"Comida",recipeType:RECIPE_TYPES.includes(data.recipeType)?data.recipeType:"Otros platos",ingredients:(data.ingredients||[]).map((ing,i)=>({id:Date.now()+i,amount:String(ing.amount||""),unit:String(ing.unit||""),name:String(ing.name||"")})),steps:Array.isArray(data.steps)?data.steps:data.steps?data.steps.split("\n").filter(s=>s.trim()):[],sourceUrl:data.sourceUrl||urlVal,time:data.time||"",servings:Number(data.servings)||4,rating:0});
       onClose();
     }catch(e){setError("Error: "+e.message);}
@@ -549,8 +551,7 @@ function ShoppingListPage({weekMenu,recipes}){
   const menu=weekMenu[key]||{};
 
   const ingredientMap={};
-  Object.values(menu).forEach(slots=>{Object.values(slots).forEach(rs=>{rs.forEach(r=>{const full=recipes.find(rec=>rec.id===r.id);(full?.ingredients||r.ingredients||[]).forEach(ing=>{const k=ing.name.toLowerCase().trim();const capName=k.charAt(0).toUpperCase()+k.slice(1);if(!ingredientMap[k]){ingredientMap[k]={...ing,name:capName,id:k,category:guessCategory(ing.name),totalAmount:parseFloat(ing.amount)||0,unit:ing.unit};}else{const existing=ingredientMap[k];const newAmt=parseFloat(ing.amount)||0;if(existing.unit===ing.unit&&newAmt>0){existing.totalAmount=(existing.totalAmount||0)+newAmt;existing.amount=String(Math.round((existing.totalAmount)*10)/10);}}}); });});});
-  Object.values(ingredientMap).forEach(i=>{if(i.totalAmount>0)i.amount=String(Math.round(i.totalAmount*10)/10);});
+  Object.values(menu).forEach(slots=>{Object.values(slots).forEach(rs=>{rs.forEach(r=>{const full=recipes.find(rec=>rec.id===r.id);(full?.ingredients||r.ingredients||[]).forEach(ing=>{const rawName=ing.name.trim();const k=rawName.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim();const capName=rawName.charAt(0).toUpperCase()+rawName.slice(1);const amt=parseFloat(String(ing.amount).replace(",",".").replace(/[^\d.]/g,""))||0;const unit=(ing.unit||"").toLowerCase().trim();if(!ingredientMap[k]){ingredientMap[k]={id:k,name:capName,amount:amt>0?String(amt):(ing.amount||""),unit:ing.unit||"",category:guessCategory(rawName),totalAmount:amt,unitKey:unit};}else{const ex=ingredientMap[k];if(ex.unitKey===unit&&amt>0){ex.totalAmount=(ex.totalAmount||0)+amt;ex.amount=String(Math.round(ex.totalAmount*10)/10);}}});});});});
 
   const allItems=[...Object.values(ingredientMap),...extraItems];
   const grouped={};SHOPPING_CATEGORIES.forEach(c=>{grouped[c.id]=[];});
