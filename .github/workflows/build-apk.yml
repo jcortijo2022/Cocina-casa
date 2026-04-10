@@ -36,9 +36,30 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
-      - name: Fix Kotlin stdlib duplicates
+      - name: Fix Kotlin duplicates
         run: |
-          sed -i 's/dependencies {/dependencies {\n    constraints {\n        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7") { because("kotlin-stdlib-jdk7 is now part of kotlin-stdlib") }\n        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8") { because("kotlin-stdlib-jdk8 is now part of kotlin-stdlib") }\n    }/' android/app/build.gradle
+          python3 - << 'PYEOF'
+          import re
+          f = open('android/build.gradle', 'r')
+          content = f.read()
+          f.close()
+          addition = """
+          subprojects {
+              configurations.all {
+                  resolutionStrategy {
+                      force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
+                      force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
+                      force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
+                  }
+              }
+          }
+          """
+          content = content + addition
+          f = open('android/build.gradle', 'w')
+          f.write(content)
+          f.close()
+          print('Fixed!')
+          PYEOF
 
       - name: Setup Java
         uses: actions/setup-java@v4
