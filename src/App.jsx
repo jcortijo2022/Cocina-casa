@@ -46,6 +46,25 @@ function getWeekDates(offset=0){
   return fmt(monday)+" - "+fmt(sunday);
 }
 
+function normalizeIngredientKey(name){
+  const n=name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+  // Normalize aceite variants
+  if(/aceite/.test(n))return"aceite";
+  // Normalize arroz variants
+  if(/\barroz\b/.test(n))return"arroz";
+  // Normalize caldo variants
+  if(/\bcaldo\b/.test(n))return"caldo";
+  // Normalize tomate variants (not tomate frito)
+  if(/\btomate\b/.test(n)&&!/frito|triturado|concentrado|conserva/.test(n))return"tomate";
+  // Normalize ajo variants
+  if(/\baj[oa]s?\b/.test(n))return"ajo";
+  // Normalize cebolla variants
+  if(/\bceboll/.test(n))return"cebolla";
+  // Normalize sal variants
+  if(/^sal(\s|$)/.test(n))return"sal";
+  return n;
+}
+
 function guessCategory(name){
   const n=name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim();
   // Fiambres y embutidos - antes que carnes para no confundir
@@ -164,11 +183,12 @@ function AddRecipeModal({open,onClose,onAdd,apiKey,onNeedKey}){
     setLoading(false);
   }
 
-  async function importByUrl(urlVal,photoDataUrl=null){
+  async function importByUrl(urlVal,photoDataUrl=null,isSearch=false){
     if(!apiKey){onNeedKey();return;}
     setLoading(true);setError("");
     try{
-      const r=await fetch("/api/import-recipe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:urlVal,apiKey})});
+      const payload=isSearch?{search:urlVal.replace("buscar:",""),apiKey}:{url:urlVal,apiKey};
+      const r=await fetch("/api/import-recipe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
       const data=await r.json();
       if(!r.ok)throw new Error(data.error||"Error del servidor");
       const finalImage=data.image==="USAR_FOTO_SUBIDA"?(photoDataUrl||""): (data.image||photoDataUrl||"");
@@ -181,7 +201,7 @@ function AddRecipeModal({open,onClose,onAdd,apiKey,onNeedKey}){
 
   function handleImport(){
     if(tab==="enlace"||tab==="video"){if(!url.trim()){setError("Introduce una URL");return;}importByUrl(url);}
-    else if(tab==="buscar"){if(!searchQuery.trim()){setError("Escribe el nombre de un plato");return;}importRecipe("Crea una receta detallada para: "+searchQuery+". Ingredientes para 4 personas. Devuelve JSON: "+TPL+" "+PROMPT_SUFFIX);}
+    else if(tab==="buscar"){if(!searchQuery.trim()){setError("Escribe el nombre de un plato");return;}importByUrl("buscar:"+searchQuery,null,true);}
     else if(tab==="texto"){if(!textInput.trim()){setError("Pega el texto de la receta");return;}importRecipe("Analiza este texto y extrae la receta completa. Devuelve JSON: "+TPL+" "+PROMPT_SUFFIX+" TEXTO: "+textInput);}
   }
 
@@ -443,17 +463,17 @@ function RecipesPage({recipes,onAdd,onDelete,onUpdate,weekMenu,setWeekMenu,curre
 
   return(
     <div style={{padding:"24px 20px"}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-        <div>
-          <h1 style={{margin:0,fontSize:26,fontWeight:800,color:"#111"}}>Nuestras Recetas</h1>
-          <p style={{margin:"4px 0 0",color:"#9CA3AF",fontSize:13}}>{recipes.length} recetas guardadas</p>
-        </div>
-        <button onClick={()=>setAddOpen(true)} style={{display:"flex",alignItems:"center",gap:8,padding:"11px 18px",background:"#F97316",color:"#fff",border:"none",borderRadius:12,fontWeight:700,fontSize:14,cursor:"pointer",whiteSpace:"nowrap"}}>+ Añadir Receta</button>
+      <div style={{marginBottom:6}}>
+        <h1 style={{margin:"0 0 4px",fontSize:26,fontWeight:800,color:"#111"}}>Nuestras Recetas</h1>
+        <p style={{margin:"0 0 10px",color:"#9CA3AF",fontSize:13}}>{recipes.length} recetas guardadas</p>
+        <button onClick={()=>setAddOpen(true)} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"12px",background:"#F97316",color:"#fff",border:"none",borderRadius:12,fontWeight:700,fontSize:14,cursor:"pointer",width:"100%"}}>+ Añadir Receta</button>
       </div>
-      <div style={{display:"flex",gap:10,margin:"16px 0",flexWrap:"wrap"}}>
-        <div style={{flex:1,minWidth:160}}><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar recetas..." style={{...inputStyle,padding:"10px 14px"}}/></div>
-        <select value={filterMeal} onChange={e=>setFilterMeal(e.target.value)} style={{padding:"10px 14px",borderRadius:10,border:"1.5px solid #E5E7EB",fontSize:13,background:"#fff",color:"#111",cursor:"pointer"}}><option value="Todas">Todas</option>{MEAL_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
-        <select value={filterType} onChange={e=>setFilterType(e.target.value)} style={{padding:"10px 14px",borderRadius:10,border:"1.5px solid #E5E7EB",fontSize:13,background:"#fff",color:"#111",cursor:"pointer"}}><option value="Todos los tipos">Todos los tipos</option>{RECIPE_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
+      <div style={{margin:"12px 0"}}>
+        <div style={{marginBottom:8}}><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar recetas..." style={{...inputStyle,padding:"10px 14px"}}/></div>
+        <div style={{display:"flex",gap:8}}>
+          <select value={filterMeal} onChange={e=>setFilterMeal(e.target.value)} style={{flex:1,padding:"10px 14px",borderRadius:10,border:"1.5px solid #E5E7EB",fontSize:13,background:"#fff",color:"#111",cursor:"pointer"}}><option value="Todas">Todas</option>{MEAL_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
+          <select value={filterType} onChange={e=>setFilterType(e.target.value)} style={{flex:1,padding:"10px 14px",borderRadius:10,border:"1.5px solid #E5E7EB",fontSize:13,background:"#fff",color:"#111",cursor:"pointer"}}><option value="Todos los tipos">Todos los tipos</option>{RECIPE_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
+        </div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:14}}>
         {filtered.map(r=><RecipeCard key={r.id} recipe={r} onOpen={setDetail} onDelete={onDelete} onAddMenu={setAddMenuRecipe} onUpdate={onUpdate}/>)}
@@ -515,8 +535,24 @@ function WeeklyMenuPage({recipes,weekMenu,setWeekMenu}){
           <div key={day} style={{display:"grid",gridTemplateColumns:"110px 1fr 1fr",borderTop:"1px solid #E5E7EB"}}>
             <div style={{padding:"14px 16px",display:"flex",alignItems:"center",background:"#FAFAFA",fontWeight:700,fontSize:13,color:"#374151"}}>{day}</div>
             {MEAL_SLOTS.map(slot=>{const items=menu[day]?.[slot]||[];return(
-              <div key={slot} style={{padding:"10px",borderLeft:"1px solid #E5E7EB",minHeight:60}}>
-                {items.map(r=>(<div key={r.id} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",background:"#F3F4F6",borderRadius:8,marginBottom:6,fontSize:12}}>
+              <div key={slot} style={{padding:"10px",borderLeft:"1px solid #E5E7EB",minHeight:60}}
+                onDragOver={e=>e.preventDefault()}
+                onDrop={e=>{
+                  e.preventDefault();
+                  try{
+                    const {recipe:r,fromDay,fromSlot}=JSON.parse(e.dataTransfer.getData("recipe"));
+                    if(fromDay===day&&fromSlot===slot)return;
+                    saveMenuToSupabase(prev=>{
+                      const w=JSON.parse(JSON.stringify(prev[key]||{}));
+                      w[fromDay]=w[fromDay]||{};w[fromDay][fromSlot]=(w[fromDay][fromSlot]||[]).filter(x=>x.id!==r.id);
+                      w[day]=w[day]||{};w[day][slot]=w[day][slot]||[];
+                      if(!w[day][slot].find(x=>x.id===r.id))w[day][slot]=[...w[day][slot],r];
+                      return{...prev,[key]:w};
+                    });
+                  }catch(e){}
+                }}>
+                {items.map(r=>(<div key={r.id} draggable onDragStart={e=>{e.dataTransfer.setData("recipe",JSON.stringify({recipe:r,fromDay:day,fromSlot:slot}));}} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 10px",background:"#F3F4F6",borderRadius:8,marginBottom:6,fontSize:12,cursor:"grab"}}>
+                  <span style={{color:"#C4C4C4",fontSize:10,marginRight:2}}>⠿</span>
                   <span style={{flex:1,fontWeight:500,color:"#111"}}>{r.title}</span>
                   <button onClick={()=>removeFromMenu(day,slot,r.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",fontSize:14,padding:2}}>×</button>
                 </div>))}
@@ -553,7 +589,7 @@ function ShoppingListPage({weekMenu,recipes}){
   const ingredientMap={};
   Object.values(menu).forEach(slots=>{Object.values(slots).forEach(rs=>{rs.forEach(r=>{const full=recipes.find(rec=>rec.id===r.id);(full?.ingredients||r.ingredients||[]).forEach(ing=>{const rawName=ing.name.trim();const k=rawName.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim();const capName=rawName.charAt(0).toUpperCase()+rawName.slice(1);const amt=parseFloat(String(ing.amount).replace(",",".").replace(/[^\d.]/g,""))||0;const unit=(ing.unit||"").toLowerCase().trim();if(!ingredientMap[k]){ingredientMap[k]={id:k,name:capName,amount:amt>0?String(amt):(ing.amount||""),unit:ing.unit||"",category:guessCategory(rawName),totalAmount:amt,unitKey:unit};}else{const ex=ingredientMap[k];if(ex.unitKey===unit&&amt>0){ex.totalAmount=(ex.totalAmount||0)+amt;ex.amount=String(Math.round(ex.totalAmount*10)/10);}}});});});});
 
-  const allItems=[...Object.values(ingredientMap),...extraItems];
+  const allItems=[...Object.values(ingredientMap),...extraItems].sort((a,b)=>a.name.localeCompare(b.name,'es'));
   const grouped={};SHOPPING_CATEGORIES.forEach(c=>{grouped[c.id]=[];});
   allItems.forEach(item=>{const cat=item.category||"otros";if(grouped[cat])grouped[cat].push(item);else grouped["otros"].push(item);});
   const checkedCount=allItems.filter(i=>checked[i.id]).length;
@@ -727,7 +763,8 @@ export default function App(){
   const isMobile=useIsMobile();
   const [sidebarOpen,setSidebarOpen]=useState(false);
 
-  async function saveMenuToSupabase(newMenu){
+  async function saveMenuToSupabase(newMenuOrFn){
+    const newMenu=typeof newMenuOrFn==="function"?newMenuOrFn(weekMenu):newMenuOrFn;
     setWeekMenu(newMenu);
     // Sync to Supabase - delete all and reinsert
     try{
