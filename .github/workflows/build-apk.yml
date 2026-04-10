@@ -36,6 +36,10 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Fix Kotlin stdlib duplicates
+        run: |
+          sed -i 's/dependencies {/dependencies {\n    constraints {\n        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7") { because("kotlin-stdlib-jdk7 is now part of kotlin-stdlib") }\n        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8") { because("kotlin-stdlib-jdk8 is now part of kotlin-stdlib") }\n    }/' android/app/build.gradle
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
