@@ -44,29 +44,52 @@ function normalizeIngKey(name){
   if(/aceite/.test(n))return"aceite";
   if(/\barroz\b/.test(n))return"arroz";
   if(/\bcaldo\b/.test(n))return"caldo";
-  if(/\btomate\b/.test(n)&&!/frito|triturado|concentrado/.test(n))return"tomate";
-  if(/\baj[oa]/.test(n))return"ajo";
   if(/\bceboll/.test(n))return"cebolla";
-  if(/\bsal\b/.test(n))return"sal";
+  if(/\btomate\b/.test(n)&&!/frito|triturado|concentrado|salsa/.test(n))return"tomate";
+  if(/\baj[oa]s?\b/.test(n))return"ajo";
+  if(n==="sal"||/^sal\s/.test(n)||/\bsal\s*(gorda|fina|marina|comun)?$/.test(n))return"sal";
   if(/\bazucar\b/.test(n))return"azucar";
   if(/\bhuevo/.test(n))return"huevo";
   if(/\bleche\b/.test(n))return"leche";
   if(/\bharina\b/.test(n))return"harina";
-  if(/\bpan\b/.test(n))return"pan";
+  if(/\bpimiento\b/.test(n))return"pimiento";
+  if(/\bpatata/.test(n))return"patata";
+  if(/\bzanahoria/.test(n))return"zanahoria";
+  if(/\bqueso\b/.test(n))return"queso";
+  if(/\bmantequilla\b/.test(n))return"mantequilla";
+  if(/espagueti|macarron|tallar|lasana|\bfideo/.test(n))return"pasta";
+  if(/\bpan\b/.test(n)&&!/pan(ceta|ado)/.test(n))return"pan";
+  if(/\bchocolate\b/.test(n))return"chocolate";
+  if(/\bvinagre\b/.test(n))return"vinagre";
+  if(/\bpimienta\b/.test(n))return"pimienta";
   return n;
 }
 
 function guessCategory(name){
   const n=name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
+  // Sal y azucar -> especias (antes que cualquier otro)
+  if(n==="sal"||/^sal\s/.test(n)||/^sal$/.test(n))return"especias";
+  if(/\bazucar\b/.test(n))return"especias";
+  // Caldo -> conservas (IMPORTANTE: antes que carnes)
+  if(/\bcaldo\b/.test(n))return"conservas";
+  // Fiambres
   if(/jamon (york|cocido|dulce|serrano|iberico)|salchichon|fuet|mortadela|chopped|pavo fiambre|pechuga (pavo|pollo) (fiambre|cocida)|fiambre|embutido|sobrasada|lomo embuchado|cecina|salami|pepperoni/.test(n))return"fiambres";
-  if(/pollo|carne|cerdo|ternera|jamon|chorizo|morcilla|panceta|costill|buey|cordero|pavo|pato|conejo|pechuga|salchicha|bacon|butifarra|longaniza|filete|magro|lomo|solomillo|codillo|carrillada|secreto|chuleta|albondiga|hamburguesa/.test(n))return"carnes";
+  // Carnes
+  if(/\bpollo\b|\bcarne\b|\bcerdo\b|ternera|\bjamon\b|chorizo|morcilla|panceta|costill|buey|cordero|\bpavo\b|\bpato\b|conejo|pechuga|salchicha|bacon|butifarra|longaniza|filete|magro|\blomo\b|solomillo|codillo|carrillada|chuleta|albondiga|hamburguesa/.test(n))return"carnes";
+  // Pescados
   if(/pescado|atun|salmon|merluza|mejillon|gamba|marisco|calamar|sepia|bacalao|sardina|boqueron|rape|lubina|dorada|langostino|chirla|almeja|pulpo|lenguado|trucha|anchoa|caballa/.test(n))return"pescados";
-  if(/tomate|cebolla|\baj[oa]|pimiento|patata|papa|zanahoria|lechuga|espinaca|berenjena|calabacin|puerro|apio|pepino|brocoli|coliflor|alcachofa|judia verde|acelga|champin|champinon|seta|portobello|calabaza|esparrago|guisante|haba|boniato|batata|col |repollo|kale|canonigo|rucola|endivia|cebolleta|cebollino|maiz dulce|verdura|hortaliza/.test(n))return"verduras";
-  if(/manzana|naranja|limon|platano|fresa|uva|pera|melocoton|albaricoque|cereza|sandia|melon|kiwi|mango|pina|fruta|frutos rojos|frambuesa|mora|arandano|granada|higo|ciruela|pomelo|mandarina|lima|coco|aguacate|fruto seco|almendra|nuez|pistacho|anacardo|avellana|cacahuete/.test(n))return"frutas";
-  if(/leche|queso|yogur|nata|mantequilla|huevo|crema (de leche|agria)|requeson|mozzarella|parmesano|ricotta|mascarpone|manchego|brie|feta|lacteo/.test(n))return"lacteos";
-  if(/\barroz\b|pasta|fideo|espagueti|macarron|lasana|cuscus|bulgur|avena|trigo|centeno|quinoa|garbanzo|lenteja|alubia|harina|pan /.test(n))return"cereales";
-  if(/tomate frito|salsa|conserva|lata de|bote de|aceitunas|alcaparra|pepinillo|caldo (de|vegetal|pollo|carne)|concentrado|sofrito|pisto/.test(n))return"conservas";
-  if(/\bsal\b|azucar|pimienta|azafran|colorante|oregano|tomillo|romero|laurel|comino|pimenton|curry|aceite|vinagre|canela|nuez moscada|clavo|especias|condimento|mostaza|ketchup|mayonesa|soja|tabasco|curcuma|jengibre|cayena|guindilla|paprika|anis|hierbas|aliño/.test(n))return"especias";
+  // Verduras
+  if(/tomate|cebolla|\baj[oa]|pimiento|patata|zanahoria|lechuga|espinaca|berenjena|calabacin|puerro|\bapio\b|pepino|brocoli|coliflor|alcachofa|judia verde|acelga|champin|champinon|seta|portobello|calabaza|esparrago|guisante|haba|boniato|batata|\bcol\b|repollo|kale|canonigo|rucola|endivia|cebolleta|cebollino|maiz dulce|verdura|hortaliza/.test(n))return"verduras";
+  // Frutas
+  if(/manzana|naranja|limon|platano|fresa|\buva\b|\bpera\b|melocoton|albaricoque|cereza|sandia|melon|kiwi|mango|\bpina\b|fruta|frambuesa|mora|arandano|granada|higo|ciruela|pomelo|mandarina|lima|coco|aguacate|fruto seco|almendra|nuez|pistacho|anacardo|avellana|cacahuete/.test(n))return"frutas";
+  // Lacteos
+  if(/\bleche\b|queso|yogur|\bnata\b|mantequilla|huevo|crema (de leche|agria)|requeson|mozzarella|parmesano|ricotta|mascarpone|manchego|brie|feta/.test(n))return"lacteos";
+  // Cereales y legumbres
+  if(/\barroz\b|espagueti|macarron|tallar|lasana|\bfideo|\bpasta\b|cuscus|bulgur|avena|\btrigo\b|quinoa|garbanzo|lenteja|alubia|\bharina\b|\bpan\b/.test(n))return"cereales";
+  // Conservas y salsas
+  if(/tomate frito|salsa (de tomate|bechamel|carbonara|boloñesa|pesto)|conserva|lata de|bote de|aceitunas|alcaparra|pepinillo|concentrado|sofrito|pisto/.test(n))return"conservas";
+  // Especias y condimentos
+  if(/pimienta|azafran|colorante|oregano|tomillo|romero|laurel|comino|pimenton|curry|\baceite\b|vinagre|canela|nuez moscada|clavo|especias|condimento|mostaza|ketchup|mayonesa|\bsoja\b|tabasco|curcuma|jengibre|cayena|guindilla|paprika|anis|hierbas|aliño/.test(n))return"especias";
   return"otros";
 }
 
@@ -410,10 +433,10 @@ function WeeklyMenuPage({recipes,weekMenu,saveMenu}){
     setPickerOpen(false);setPickerTarget(null);
   }
 
-  function handleDrop(e,toDay,toSlot){
-    e.preventDefault();
+  function handleDrop(e,toDay,toSlot,touchData=null){
+    if(e)e.preventDefault();
     try{
-      const{recipe:r,fromDay,fromSlot}=JSON.parse(e.dataTransfer.getData("recipe"));
+      const{recipe:r,fromDay,fromSlot}=touchData||JSON.parse(e.dataTransfer.getData("recipe"));
       if(fromDay===toDay&&fromSlot===toSlot)return;
       const nm=JSON.parse(JSON.stringify(weekMenu));
       if(!nm[key])nm[key]={};
@@ -453,8 +476,20 @@ function WeeklyMenuPage({recipes,weekMenu,saveMenu}){
             {MEAL_SLOTS.map(slot=>{const items=menu[day]?.[slot]||[];return(
               <div key={slot} style={{padding:"8px",borderLeft:"1px solid #E5E7EB",minHeight:55,background:"transparent"}}
                 onDragOver={e=>e.preventDefault()}
-                onDrop={e=>handleDrop(e,day,slot)}>
-                {items.map(r=>(<div key={r.id} draggable onDragStart={e=>e.dataTransfer.setData("recipe",JSON.stringify({recipe:r,fromDay:day,fromSlot:slot}))} style={{display:"flex",alignItems:"center",gap:5,padding:"5px 8px",background:"#F3F4F6",borderRadius:7,marginBottom:5,fontSize:11,cursor:"grab"}}>
+                onDrop={e=>handleDrop(e,day,slot)}
+                onTouchMove={e=>{
+                  const t=e.touches[0];
+                  const el=document.elementFromPoint(t.clientX,t.clientY);
+                  const cell=el?.closest("[data-day][data-slot]");
+                  if(cell)window._dropTarget={toDay:cell.dataset.day,toSlot:cell.dataset.slot};
+                }}
+                data-day={day} data-slot={slot}>
+                {items.map(r=>(<div key={r.id}
+                  draggable
+                  onDragStart={e=>e.dataTransfer.setData("recipe",JSON.stringify({recipe:r,fromDay:day,fromSlot:slot}))}
+                  onTouchStart={e=>{window._dragData={recipe:r,fromDay:day,fromSlot:slot};e.currentTarget.style.opacity="0.5";}}
+                  onTouchEnd={e=>{e.currentTarget.style.opacity="1";if(window._dropTarget){const{toDay,toSlot}=window._dropTarget;if(!(toDay===day&&toSlot===slot)){handleDrop(null,toDay,toSlot,window._dragData);}window._dropTarget=null;}window._dragData=null;}}
+                  style={{display:"flex",alignItems:"center",gap:5,padding:"5px 8px",background:"#F3F4F6",borderRadius:7,marginBottom:5,fontSize:11,cursor:"grab"}}>
                   <span style={{color:"#C4C4C4",fontSize:9}}>⠿</span>
                   <span style={{flex:1,fontWeight:500,color:"#111"}}>{r.title}</span>
                   <button onClick={()=>removeFromMenu(day,slot,r.id)} style={{background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",fontSize:12,padding:1}}>×</button>
