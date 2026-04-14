@@ -381,7 +381,7 @@ function RecipesPage({recipes,onAdd,onDelete,onUpdate,weekMenu,saveMenu,weekOffs
   const [filterMeal,setFilterMeal]=useState("Todas");
   const [filterType,setFilterType]=useState("Todos los tipos");
 
-  const detail=detailId?recipes.find(r=>r.id===detailId)||null:null;
+  const detail=detailId?recipes.find(r=>String(r.id)===String(detailId))||null:null;
   if(detail){return<RecipeDetail recipe={detail} onBack={()=>setDetailId(null)} onDelete={id=>{onDelete(id);setDetailId(null);}} onUpdate={onUpdate} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={weekOffset}/>;}
 
   const filtered=recipes.filter(r=>r.title.toLowerCase().includes(search.toLowerCase())&&(filterMeal==="Todas"||r.mealType===filterMeal)&&(filterType==="Todos los tipos"||r.recipeType===filterType));
@@ -398,8 +398,8 @@ function RecipesPage({recipes,onAdd,onDelete,onUpdate,weekMenu,saveMenu,weekOffs
           <select value={filterType} onChange={e=>setFilterType(e.target.value)} style={{flex:1,padding:"10px 12px",borderRadius:10,border:"1.5px solid #E5E7EB",fontSize:12,background:"#fff",color:"#111",cursor:"pointer"}}><option value="Todos los tipos">Todos los tipos</option>{RECIPE_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12}}>
-        {filtered.map(r=><RecipeCard key={r.id} recipe={r} onOpen={r=>setDetailId(r.id)} onDelete={onDelete} onAddMenu={setAddMenuRecipe} onUpdate={onUpdate}/>)}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:12,paddingBottom:80}}>
+        {filtered.map(r=><RecipeCard key={r.id} recipe={r} onOpen={rec=>setDetailId(String(rec.id))} onDelete={onDelete} onAddMenu={setAddMenuRecipe} onUpdate={onUpdate}/>)}
         {filtered.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"50px",color:"#9CA3AF"}}><div style={{fontSize:44,marginBottom:10}}>🍽️</div><p>No hay recetas. Anade la primera!</p></div>}
       </div>
       <AddRecipeModal open={addOpen} onClose={()=>setAddOpen(false)} onAdd={r=>{onAdd(r);setAddOpen(false);}} apiKey={apiKey} onNeedKey={()=>{setAddOpen(false);onNeedKey();}}/>
@@ -614,7 +614,7 @@ export default function App(){
       setLoadingData(true);
       try{
         const {data:recs}=await supabase.from("recipes").select("*").order("created_at",{ascending:false});
-        if(recs)setRecipes(recs.map(r=>({Ellipsisid:r.id,title:r.title,description:r.description||"",image:r.image||"",mealType:r.meal_type||"Comida",recipeType:r.recipe_type||"Otros platos",ingredients:r.ingredients||[],steps:r.steps||[],sourceUrl:r.source_url||"",time:r.time||"",servings:r.servings||4,rating:r.rating||0})));
+        if(recs)setRecipes(recs.map(r=>({id:r.id,title:r.title,description:r.description||"",image:r.image||"",mealType:r.meal_type||"Comida",recipeType:r.recipe_type||"Otros platos",ingredients:r.ingredients||[],steps:r.steps||[],sourceUrl:r.source_url||"",time:r.time||"",servings:r.servings||4,rating:r.rating||0})));
         const {data:menu}=await supabase.from("week_menu").select("*");
         if(menu){const m={};menu.forEach(x=>{if(!m[x.week_key])m[x.week_key]={};if(!m[x.week_key][x.day])m[x.week_key][x.day]={};if(!m[x.week_key][x.day][x.slot])m[x.week_key][x.day][x.slot]=[];if(x.recipe_data)m[x.week_key][x.day][x.slot].push(x.recipe_data);});setWeekMenu(m);}
       }catch(e){console.error(e);}

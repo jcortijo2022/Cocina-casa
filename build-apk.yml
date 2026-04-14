@@ -25,12 +25,10 @@ jobs:
         run: npm run build
 
       - name: Install Capacitor
-        run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+        run: npm install @capacitor/core @capacitor/cli @capacitor/android
 
       - name: Init Capacitor
-        run: |
-          npx cap init "Cocina Casa" "com.jesuscortijo.cocinaycasa" --web-dir=dist
+        run: npx cap init "Cocina Casa" "com.jesuscortijo.cocinaycasa" --web-dir=dist
 
       - name: Add Android platform
         run: npx cap add android
@@ -38,10 +36,38 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Set custom app icon
+        run: |
+          sudo apt-get install -y imagemagick
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          convert public/favicon.jpg -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert public/favicon.jpg -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert public/favicon.jpg -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert public/favicon.jpg -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert public/favicon.jpg -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          convert public/favicon.jpg -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          convert public/favicon.jpg -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          convert public/favicon.jpg -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          convert public/favicon.jpg -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          convert public/favicon.jpg -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+
+      - name: Fix Kotlin duplicates
+        run: |
+          python3 - << 'PYEOF'
+          content = open('android/build.gradle').read()
+          addition = "\nsubprojects {\n    configurations.all {\n        resolutionStrategy {\n            force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'\n            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'\n            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'\n        }\n    }\n}\n"
+          open('android/build.gradle','w').write(content + addition)
+          print('Fixed!')
+          PYEOF
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
       - name: Setup Android SDK
@@ -51,9 +77,7 @@ jobs:
         run: chmod +x android/gradlew
 
       - name: Build APK
-        run: |
-          cd android
-          ./gradlew assembleDebug
+        run: cd android && ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

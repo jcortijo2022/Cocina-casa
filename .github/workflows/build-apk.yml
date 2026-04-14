@@ -36,28 +36,31 @@ jobs:
       - name: Sync Capacitor
         run: npx cap sync android
 
+      - name: Set custom app icon
+        run: |
+          sudo apt-get install -y imagemagick
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          convert public/favicon.jpg -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert public/favicon.jpg -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert public/favicon.jpg -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert public/favicon.jpg -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          convert public/favicon.jpg -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          convert public/favicon.jpg -resize 48x48 android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          convert public/favicon.jpg -resize 72x72 android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          convert public/favicon.jpg -resize 96x96 android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          convert public/favicon.jpg -resize 144x144 android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          convert public/favicon.jpg -resize 192x192 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+
       - name: Fix Kotlin duplicates
         run: |
           python3 - << 'PYEOF'
-          import re
-          f = open('android/build.gradle', 'r')
-          content = f.read()
-          f.close()
-          addition = """
-          subprojects {
-              configurations.all {
-                  resolutionStrategy {
-                      force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
-                      force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
-                      force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
-                  }
-              }
-          }
-          """
-          content = content + addition
-          f = open('android/build.gradle', 'w')
-          f.write(content)
-          f.close()
+          content = open('android/build.gradle').read()
+          addition = "\nsubprojects {\n    configurations.all {\n        resolutionStrategy {\n            force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'\n            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'\n            force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'\n        }\n    }\n}\n"
+          open('android/build.gradle','w').write(content + addition)
           print('Fixed!')
           PYEOF
 
