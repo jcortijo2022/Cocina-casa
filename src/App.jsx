@@ -23,12 +23,14 @@ const SHOPPING_CATS = [
   {id:"carnes",label:"Carnes",emoji:"🥩"},
   {id:"fiambres",label:"Fiambres y Embutidos",emoji:"🥓"},
   {id:"pescados",label:"Pescados y Mariscos",emoji:"🐟"},
+  {id:"congelados",label:"Congelados",emoji:"🧊"},
   {id:"verduras",label:"Verduras y Hortalizas",emoji:"🥦"},
   {id:"frutas",label:"Frutas",emoji:"🍎"},
   {id:"lacteos",label:"Lacteos y Huevos",emoji:"🥚"},
   {id:"cereales",label:"Cereales y Legumbres",emoji:"🌾"},
   {id:"conservas",label:"Conservas y Salsas",emoji:"🥫"},
   {id:"especias",label:"Especias y Condimentos",emoji:"🧂"},
+  {id:"limpieza",label:"Limpieza y Bano",emoji:"🧹"},
   {id:"otros",label:"Otros",emoji:"🛒"},
 ];
 const S={
@@ -67,29 +69,32 @@ function normalizeIngKey(name){
 
 function guessCategory(name){
   const n=name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
-  // Sal y azucar -> especias (antes que cualquier otro)
-  if(n==="sal"||/^sal\s/.test(n)||/^sal$/.test(n))return"especias";
-  if(/\bazucar\b/.test(n))return"especias";
-  // Caldo -> conservas (IMPORTANTE: antes que carnes)
+  // Sal y azucar -> especias
+  if(n==="sal"||/^sal\s/.test(n)||n==="azucar"||/^azucar\b/.test(n))return"especias";
+  // Caldo -> conservas
   if(/\bcaldo\b/.test(n))return"conservas";
+  // Limpieza y bano
+  if(/jabon|champu|gel de ducha|pasta de dientes|cepillo de dientes|cepillo oidos|compresas|salvaslip|desodorante|papel (del )?water|papel higienico|lejia|suavizante|lavaplatos|lavavajillas|limpiacristales|detergente|estropajo|\bmopa\b|fregona|\bcubo\b|escoba|recogedor|limpiamopas|limpiamuebles|bayeta|papel cocina|bolsas basura/.test(n))return"limpieza";
+  // Congelados
+  if(/croqueta|empanadilla|gyoza|tortilla de camaron|\bpizza\b|helado|tempura|nuggets|bastones de pescado|guisantes congelados|espinacas congeladas|verduras congeladas|patatas fritas congeladas|precocinado/.test(n))return"congelados";
   // Fiambres
   if(/jamon (york|cocido|dulce|serrano|iberico)|salchichon|fuet|mortadela|chopped|pavo fiambre|pechuga (pavo|pollo) (fiambre|cocida)|fiambre|embutido|sobrasada|lomo embuchado|cecina|salami|pepperoni/.test(n))return"fiambres";
   // Carnes
-  if(/\bpollo\b|\bcarne\b|\bcerdo\b|ternera|\bjamon\b|chorizo|morcilla|panceta|costill|buey|cordero|\bpavo\b|\bpato\b|conejo|pechuga|salchicha|bacon|butifarra|longaniza|filete|magro|\blomo\b|solomillo|codillo|carrillada|chuleta|albondiga|hamburguesa/.test(n))return"carnes";
+  if(/\bpollo\b|\bcarne\b|\bcerdo\b|ternera|\bjamon\b|chorizo|morcilla|panceta|costill|buey|cordero|\bpavo\b|\bpato\b|conejo|pechuga|salchicha|bacon|butifarra|longaniza|filete|magro|\blomo\b|solomillo|codillo|carrillada|chuleta|albondiga|hamburguesa|tocino|papada|lacon/.test(n))return"carnes";
   // Pescados
   if(/pescado|atun|salmon|merluza|mejillon|gamba|marisco|calamar|sepia|bacalao|sardina|boqueron|rape|lubina|dorada|langostino|chirla|almeja|pulpo|lenguado|trucha|anchoa|caballa/.test(n))return"pescados";
   // Verduras
-  if(/tomate|cebolla|\baj[oa]|pimiento|patata|zanahoria|lechuga|espinaca|berenjena|calabacin|puerro|\bapio\b|pepino|brocoli|coliflor|alcachofa|judia verde|acelga|champin|champinon|seta|portobello|calabaza|esparrago|guisante|haba|boniato|batata|\bcol\b|repollo|kale|canonigo|rucola|endivia|cebolleta|cebollino|maiz dulce|verdura|hortaliza/.test(n))return"verduras";
+  if(/tomate|cebolla|\baj[oa]|pimiento|patata|zanahoria|lechuga|espinaca|berenjena|calabacin|puerro|\bapio\b|pepino|brocoli|coliflor|alcachofa|judia verde|judias verdes|acelga|champin|champinon|seta|portobello|calabaza|esparrago|guisante|haba|boniato|batata|\bcol\b|repollo|kale|canonigo|rucola|endivia|cebolleta|cebollino|maiz dulce|verdura|hortaliza|nabo|chiriva/.test(n))return"verduras";
   // Frutas
   if(/manzana|naranja|limon|platano|fresa|\buva\b|\bpera\b|melocoton|albaricoque|cereza|sandia|melon|kiwi|mango|\bpina\b|fruta|frambuesa|mora|arandano|granada|higo|ciruela|pomelo|mandarina|lima|coco|aguacate|fruto seco|almendra|nuez|pistacho|anacardo|avellana|cacahuete/.test(n))return"frutas";
   // Lacteos
   if(/\bleche\b|queso|yogur|\bnata\b|mantequilla|huevo|crema (de leche|agria)|requeson|mozzarella|parmesano|ricotta|mascarpone|manchego|brie|feta/.test(n))return"lacteos";
   // Cereales y legumbres
-  if(/\barroz\b|espagueti|macarron|tallar|lasana|\bfideo|\bpasta\b|cuscus|bulgur|avena|\btrigo\b|quinoa|garbanzo|lenteja|alubia|\bharina\b|\bpan\b/.test(n))return"cereales";
+  if(/\barroz\b|espagueti|macarron|tallar|lasana|tortellini|ravioli|canelone|\bfideo|\bpasta\b|cuscus|bulgur|avena|\btrigo\b|quinoa|garbanzo|lenteja|alubia|judia blanca|judia pinta|\bharina\b|\bpan\b/.test(n))return"cereales";
   // Conservas y salsas
-  if(/tomate frito|salsa (de tomate|bechamel|carbonara|boloñesa|pesto)|conserva|lata de|bote de|aceitunas|alcaparra|pepinillo|concentrado|sofrito|pisto/.test(n))return"conservas";
+  if(/tomate frito|salsa (de tomate|bechamel|carbonara|bolonesa|pesto)|conserva|lata de|bote de|aceitunas|alcaparra|pepinillo|concentrado|sofrito|pisto/.test(n))return"conservas";
   // Especias y condimentos
-  if(/pimienta|azafran|colorante|oregano|tomillo|romero|laurel|comino|pimenton|curry|\baceite\b|vinagre|canela|nuez moscada|clavo|especias|condimento|mostaza|ketchup|mayonesa|\bsoja\b|tabasco|curcuma|jengibre|cayena|guindilla|paprika|anis|hierbas|aliño/.test(n))return"especias";
+  if(/pimienta|azafran|colorante|oregano|tomillo|romero|laurel|comino|pimenton|curry|\baceite\b|vinagre|canela|nuez moscada|clavo|especias|condimento|mostaza|ketchup|mayonesa|\bsoja\b|tabasco|curcuma|jengibre|cayena|guindilla|paprika|anis|hierbas|aliño|perejil|albahaca|cilantro|eneldo|estragón|mejorana|menta|hierbabuena/.test(n))return"especias";
   return"otros";
 }
 
@@ -204,7 +209,7 @@ function AddRecipeModal({open,onClose,onAdd,apiKey,onNeedKey}){
   }
 
   return(
-    <Modal open={open} onClose={onClose} title="Anadir Receta" width={500}>
+    <Modal open={open} onClose={onClose} title="Añadir Receta" width={500}>
       <div style={{display:"flex",gap:5,marginBottom:18,flexWrap:"wrap"}}>
         {TABS.map(t=><button key={t.id} onClick={()=>{setTab(t.id);setError("");}} style={{padding:"6px 12px",borderRadius:20,border:"2px solid "+(tab===t.id?"#F97316":"#E5E7EB"),background:tab===t.id?"#FFF7ED":"#fff",color:tab===t.id?"#F97316":"#111",fontWeight:600,cursor:"pointer",fontSize:12}}>{t.label}</button>)}
       </div>
@@ -280,8 +285,10 @@ function CopyWeekModal({open,onClose,weekMenu,weekOffset,saveMenu}){
 
 function RecipeImageSection({recipe,onUpdate}){
   const fileRef=useRef();
-  function handleUpload(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>onUpdate({...recipe,image:r.result});r.readAsDataURL(file);}
-  if(recipe.image){return(<div style={{borderRadius:14,overflow:"hidden",marginBottom:14,height:260,position:"relative",cursor:"pointer"}} onClick={()=>fileRef.current.click()}><img src={recipe.image} alt={recipe.title} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.parentNode.style.display="none"}}/><div style={{position:"absolute",bottom:8,right:8,background:"rgba(0,0,0,.5)",borderRadius:7,padding:"5px 9px",color:"#fff",fontSize:11}}>📷 Cambiar</div><input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} style={{display:"none"}}/></div>);}
+  const [imgError,setImgError]=useState(false);
+  function handleUpload(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{onUpdate({...recipe,image:r.result});setImgError(false);};r.readAsDataURL(file);}
+  const hasValidImg=recipe.image&&!imgError;
+  if(hasValidImg){return(<div style={{borderRadius:14,overflow:"hidden",marginBottom:14,height:260,position:"relative",cursor:"pointer"}} onClick={()=>fileRef.current.click()}><img src={recipe.image} alt={recipe.title} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={()=>setImgError(true)}/><div style={{position:"absolute",bottom:8,right:8,background:"rgba(0,0,0,.5)",borderRadius:7,padding:"5px 9px",color:"#fff",fontSize:11}}>📷 Cambiar</div><input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} style={{display:"none"}}/></div>);}
   return(<div style={{borderRadius:14,marginBottom:14,height:140,background:"#F9FAFB",border:"2px dashed #E5E7EB",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",gap:6}} onClick={()=>fileRef.current.click()}><span style={{fontSize:36}}>📷</span><span style={{color:"#9CA3AF",fontSize:13}}>Añadir foto</span><input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} style={{display:"none"}}/></div>);
 }
 
@@ -300,7 +307,7 @@ function RecipeCard({recipe,onOpen,onDelete,onAddMenu,onUpdate}){
         {recipe.image?<img src={recipe.image} alt={recipe.title} style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none"}}/>:<CardImageUpload recipe={recipe} onUpdate={onUpdate}/>}
         <span style={{position:"absolute",top:8,left:8,padding:"3px 9px",borderRadius:18,background:col.bg,color:col.text,fontWeight:700,fontSize:10}}>{recipe.mealType}</span>
         <div style={{position:"absolute",top:6,right:6}}>
-          <button onClick={e=>{e.stopPropagation();setMenuOpen(v=>!v);}} style={{width:28,height:28,borderRadius:50,background:"rgba(255,255,255,.92)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 4px rgba(0,0,0,.12)"}}>⋮</button>
+          <button onClick={e=>{e.stopPropagation();setMenuOpen(v=>!v);}} style={{width:28,height:28,borderRadius:50,background:"rgba(255,255,255,.95)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 1px 6px rgba(0,0,0,.25)",color:"#111",fontWeight:900,fontSize:18}}>⋮</button>
           {menuOpen&&(<div style={{position:"absolute",right:0,top:32,background:"#fff",borderRadius:11,boxShadow:"0 8px 28px rgba(0,0,0,.14)",minWidth:170,zIndex:10,overflow:"hidden"}} onMouseLeave={()=>setMenuOpen(false)}>
             <button onClick={e=>{e.stopPropagation();setMenuOpen(false);onAddMenu(recipe);}} style={{display:"flex",alignItems:"center",gap:7,padding:"11px 14px",background:"none",border:"none",cursor:"pointer",width:"100%",fontSize:12,fontWeight:600,color:"#374151",textAlign:"left"}}>📅 Añadir al menu semanal</button>
             <button onClick={e=>{e.stopPropagation();setMenuOpen(false);onDelete(recipe.id);}} style={{display:"flex",alignItems:"center",gap:7,padding:"11px 14px",background:"none",border:"none",cursor:"pointer",width:"100%",fontSize:12,fontWeight:600,color:"#EF4444",textAlign:"left"}}>🗑️ Eliminar receta</button>
