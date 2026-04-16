@@ -147,6 +147,8 @@ function AddRecipeModal({open,onClose,onAdd,apiKey,onNeedKey}){
   const fileRef=useRef();
 
   const TABS=[{id:"buscar",label:"🔍 Buscar"},{id:"enlace",label:"🔗 Enlace"},{id:"video",label:"🎥 Video"},{id:"foto",label:"📷 Foto"},{id:"texto",label:"📝 Texto"}];
+      useEffect(()=>{setUrl("");setQuery("");setText("");setError("");},[tab]);
+      useEffect(()=>{setUrl("");setQuery("");setText("");setError("");},[tab]);
 
   async function callAPI(prompt,imgData=null){
     if(!apiKey){onNeedKey();return null;}
@@ -247,7 +249,7 @@ function EditIngModal({open,onClose,ingredients,onSave}){
   );
 }
 
-function AddToMenuModal({open,onClose,recipe,saveMenu,weekMenu,weekOffset}){
+function AddToMenuModal({open,onClose,recipe,saveMenu,weekMenu,weekOffset,onUseRecipe}){
   const [day,setDay]=useState("Lunes");
   const [slot,setSlot]=useState("Comida");
   function add(){
@@ -258,6 +260,8 @@ function AddToMenuModal({open,onClose,recipe,saveMenu,weekMenu,weekOffset}){
     if(!newMenu[key][day][slot])newMenu[key][day][slot]=[];
     if(!newMenu[key][day][slot].find(r=>r.id===recipe.id))newMenu[key][day][slot].push(recipe);
     saveMenu(newMenu);
+    // Increment use counter
+    if(onUseRecipe)onUseRecipe(recipe.id,1);
     onClose();
   }
   return(
@@ -318,7 +322,7 @@ function RecipeCard({recipe,onOpen,onDelete,onAddMenu,onUpdate}){
         <h3 style={{margin:"0 0 4px",fontSize:13,fontWeight:700,color:"#111",lineHeight:1.3,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{recipe.title}</h3>
         <p style={{margin:"0 0 8px",fontSize:11,color:"#6B7280",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{recipe.description}</p>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{display:"flex",gap:8,fontSize:10,color:"#9CA3AF"}}>{recipe.time&&<span>⏱ {recipe.time}</span>}<span>👥 {recipe.servings}p</span></div>
+          <div style={{display:"flex",gap:8,fontSize:10,color:"#9CA3AF"}}>{recipe.time&&<span>⏱ {recipe.time}</span>}<span>👥 {recipe.servings}p</span>{recipe.useCount>0&&<span style={{color:"#F97316",fontWeight:700}}>×{recipe.useCount}</span>}</div>
           <StarRating value={recipe.rating} onChange={()=>{}} size={12}/>
         </div>
       </div>
@@ -326,7 +330,7 @@ function RecipeCard({recipe,onOpen,onDelete,onAddMenu,onUpdate}){
   );
 }
 
-function RecipeDetail({recipe,onBack,onDelete,onUpdate,weekMenu,saveMenu,weekOffset}){
+function RecipeDetail({recipe,onBack,onDelete,onUpdate,weekMenu,saveMenu,weekOffset,onUseRecipe}){
   const [editIngOpen,setEditIngOpen]=useState(false);
   const [addMenuOpen,setAddMenuOpen]=useState(false);
   const scrollRef=useRef();
@@ -376,12 +380,12 @@ function RecipeDetail({recipe,onBack,onDelete,onUpdate,weekMenu,saveMenu,weekOff
         </div>
       </div>)}
       <EditIngModal open={editIngOpen} onClose={()=>setEditIngOpen(false)} ingredients={recipe.ingredients} onSave={ings=>onUpdate({...recipe,ingredients:ings})}/>
-      <AddToMenuModal open={addMenuOpen} onClose={()=>setAddMenuOpen(false)} recipe={recipe} saveMenu={saveMenu} weekMenu={weekMenu} weekOffset={weekOffset}/>
+      <AddToMenuModal open={addMenuOpen} onClose={()=>setAddMenuOpen(false)} recipe={recipe} saveMenu={saveMenu} weekMenu={weekMenu} weekOffset={weekOffset} onUseRecipe={onUseRecipe}/>
     </div>
   );
 }
 
-function RecipesPage({recipes,onAdd,onDelete,onUpdate,weekMenu,saveMenu,weekOffset,apiKey,onNeedKey,detailId,setDetailId,isMobile}){
+function RecipesPage({recipes,onAdd,onDelete,onUpdate,weekMenu,saveMenu,weekOffset,apiKey,onNeedKey,detailId,setDetailId,isMobile,onUseRecipe}){
   const [addOpen,setAddOpen]=useState(false);
   const [addMenuRecipe,setAddMenuRecipe]=useState(null);
   const [search,setSearch]=useState("");
@@ -389,7 +393,7 @@ function RecipesPage({recipes,onAdd,onDelete,onUpdate,weekMenu,saveMenu,weekOffs
   const [filterType,setFilterType]=useState("Todos los tipos");
 
   const detail=detailId?recipes.find(r=>String(r.id)===String(detailId))||null:null;
-  if(detail){return<RecipeDetail recipe={detail} onBack={()=>setDetailId(null)} onDelete={id=>{onDelete(id);setDetailId(null);}} onUpdate={onUpdate} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={weekOffset}/>;}
+  if(detail){return<RecipeDetail recipe={detail} onBack={()=>setDetailId(null)} onDelete={id=>{onDelete(id);setDetailId(null);}} onUpdate={onUpdate} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={weekOffset} onUseRecipe={onUseRecipe}/>;}
 
   const filtered=recipes.filter(r=>r.title.toLowerCase().includes(search.toLowerCase())&&(filterMeal==="Todas"||r.mealType===filterMeal)&&(filterType==="Todos los tipos"||r.recipeType===filterType));
 
@@ -410,12 +414,12 @@ function RecipesPage({recipes,onAdd,onDelete,onUpdate,weekMenu,saveMenu,weekOffs
         {filtered.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"50px",color:"#9CA3AF"}}><div style={{fontSize:44,marginBottom:10}}>🍽️</div><p>No hay recetas. Anade la primera!</p></div>}
       </div>
       <AddRecipeModal open={addOpen} onClose={()=>setAddOpen(false)} onAdd={r=>{onAdd(r);setAddOpen(false);}} apiKey={apiKey} onNeedKey={()=>{setAddOpen(false);onNeedKey();}}/>
-      {addMenuRecipe&&<AddToMenuModal open={true} onClose={()=>setAddMenuRecipe(null)} recipe={addMenuRecipe} saveMenu={saveMenu} weekMenu={weekMenu} weekOffset={weekOffset}/>}
+      {addMenuRecipe&&<AddToMenuModal open={true} onClose={()=>setAddMenuRecipe(null)} recipe={addMenuRecipe} saveMenu={saveMenu} weekMenu={weekMenu} weekOffset={weekOffset} onUseRecipe={onUseRecipe}/>}
     </div>
   );
 }
 
-function WeeklyMenuPage({recipes,weekMenu,saveMenu}){
+function WeeklyMenuPage({recipes,weekMenu,saveMenu,onUseRecipe}){
   const [weekOffset,setWeekOffset]=useState(0);
   const [copyOpen,setCopyOpen]=useState(false);
   const [pickerOpen,setPickerOpen]=useState(false);
@@ -428,6 +432,7 @@ function WeeklyMenuPage({recipes,weekMenu,saveMenu}){
     const nm=JSON.parse(JSON.stringify(weekMenu));
     if(nm[key]&&nm[key][day]&&nm[key][day][slot]){nm[key][day][slot]=nm[key][day][slot].filter(r=>r.id!==id);}
     saveMenu(nm);
+    if(onUseRecipe)onUseRecipe(id,-1);
   }
 
   function addToMenu(recipe){
@@ -540,8 +545,8 @@ function ShoppingListPage({weekMenu,recipes}){
   allItems.forEach(item=>{const cat=item.category||"otros";if(grouped[cat])grouped[cat].push(item);else grouped["otros"].push(item);});
   const checkedCount=allItems.filter(i=>checked[i.id]).length;
 
-  function buildWA(){let t="Lista de la Compra\n\n";SHOPPING_CATS.forEach(c=>{const items=grouped[c.id];if(!items.length)return;t+=c.emoji+" "+c.label+"\n";items.forEach(i=>{t+="  - "+i.name+(i.amount?" ("+i.amount+" "+i.unit+")":"")+"\n";});t+="\n";});window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank");}
-  function copyList(){let t="";SHOPPING_CATS.forEach(c=>{const items=grouped[c.id];if(!items.length)return;t+=c.label+":\n";items.forEach(i=>{t+="  - "+i.name+(i.amount?" ("+i.amount+" "+i.unit+")":"")+"\n";});t+="\n";});navigator.clipboard.writeText(t).catch(()=>{});}
+  function buildWA(){let t="Lista de la Compra\n\n";SHOPPING_CATS.forEach(c=>{const items=grouped[c.id];if(!items.length)return;t+=c.emoji+" "+c.label+"\n";items.forEach(i=>{t+="  - "+i.name+(i.amounts&&i.amounts.length?" ("+i.amounts.join(" + ")+")":"")+"\n";});t+="\n";});window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank");}
+  function copyList(){let t="";SHOPPING_CATS.forEach(c=>{const items=grouped[c.id];if(!items.length)return;t+=c.label+":\n";items.forEach(i=>{t+="  - "+i.name+(i.amounts&&i.amounts.length?" ("+i.amounts.join(" + ")+")":"")+"\n";});t+="\n";});navigator.clipboard.writeText(t).catch(()=>{});}
   function addExtra(){if(!newItem.trim())return;const n=cap(newItem.trim());setExtras(p=>[...p,{id:"ex-"+Date.now(),name:n,amount:"",unit:"",category:guessCategory(n)}]);setNewItem("");}
 
   return(
@@ -574,7 +579,7 @@ function ShoppingListPage({weekMenu,recipes}){
                   {checked[item.id]&&<span style={{color:"#fff",fontSize:11}}>✓</span>}
                 </button>
                 <span style={{flex:1,fontSize:13,fontWeight:500,color:checked[item.id]?"#9CA3AF":"#111",textDecoration:checked[item.id]?"line-through":"none",textAlign:"left"}}>
-                  {item.name}{item.amount&&<span style={{color:"#9CA3AF",fontWeight:400,marginLeft:5}}>({item.amount} {item.unit})</span>}
+                  {item.name}{item.amounts&&item.amounts.filter(a=>a&&a!=='al gusto'||item.amounts.length===1).length>0&&<span style={{color:"#9CA3AF",fontWeight:400,marginLeft:5}}>({item.amounts.join(', ')})</span>}
                 </span>
                 {checked[item.id]?<button onClick={()=>{setExtras(p=>p.filter(i=>i.id!==item.id));setChecked(p=>{const n={...p};delete n[item.id];return n;});}} style={{background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:14}}>🗑️</button>:<button onClick={()=>setEditItem({...item})} style={{background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",fontSize:14}}>✏️</button>}
               </div>
@@ -597,6 +602,71 @@ function ShoppingListPage({weekMenu,recipes}){
     </div>
   );
 }
+
+function AllRecipesPage({recipes,onDelete,weekMenu,saveMenu,weekOffset,onUseRecipe}){
+  const [addMenuRecipe,setAddMenuRecipe]=useState(null);
+  const [filterMeal,setFilterMeal]=useState("Todas");
+  const filteredRecipes=filterMeal==="Todas"?recipes:recipes.filter(r=>r.mealType===filterMeal);
+  const grouped={};
+  MEAL_TYPES.forEach(mt=>{
+    const byType={};
+    RECIPE_TYPES.forEach(rt=>{
+      const recs=filteredRecipes.filter(r=>r.mealType===mt&&r.recipeType===rt).sort((a,b)=>a.title.localeCompare(b.title,'es'));
+      if(recs.length>0)byType[rt]=recs;
+    });
+    // Also catch unmatched
+    const other=filteredRecipes.filter(r=>r.mealType===mt&&!RECIPE_TYPES.includes(r.recipeType)).sort((a,b)=>a.title.localeCompare(b.title,'es'));
+    if(other.length>0)byType["Otros platos"]=[...(byType["Otros platos"]||[]),...other];
+    if(Object.keys(byType).length>0)grouped[mt]=byType;
+  });
+
+  return(
+    <div style={{padding:"18px 16px"}}>
+      <h1 style={{margin:"0 0 4px",fontSize:24,fontWeight:800,color:"#111"}}>Todas las Recetas</h1>
+      <p style={{margin:"0 0 10px",color:"#9CA3AF",fontSize:12}}>{recipes.length} recetas ordenadas por tipo</p>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+        <button onClick={()=>setFilterMeal("Todas")} style={{padding:"6px 14px",borderRadius:20,border:"2px solid "+(filterMeal==="Todas"?"#F97316":"#E5E7EB"),background:filterMeal==="Todas"?"#FFF7ED":"#fff",color:filterMeal==="Todas"?"#F97316":"#374151",fontWeight:600,fontSize:12,cursor:"pointer"}}>Todas</button>
+        {MEAL_TYPES.map(mt=><button key={mt} onClick={()=>setFilterMeal(mt)} style={{padding:"6px 14px",borderRadius:20,border:"2px solid "+(filterMeal===mt?MEAL_TYPE_COLORS[mt]?.bg||"#F97316":"#E5E7EB"),background:filterMeal===mt?(MEAL_TYPE_COLORS[mt]?.bg||"#FFF7ED"):"#fff",color:filterMeal===mt?(MEAL_TYPE_COLORS[mt]?.text||"#F97316"):"#374151",fontWeight:600,fontSize:12,cursor:"pointer"}}>{mt}</button>)}
+      </div>
+      {MEAL_TYPES.map(mt=>{
+        if(!grouped[mt])return null;
+        return(
+          <div key={mt} style={{marginBottom:24}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+              <span style={{padding:"4px 12px",borderRadius:20,background:MEAL_TYPE_COLORS[mt]?.bg||"#6B7280",color:MEAL_TYPE_COLORS[mt]?.text||"#fff",fontWeight:700,fontSize:13}}>{mt}</span>
+            </div>
+            {Object.entries(grouped[mt]).map(([rt,recs])=>(
+              <div key={rt} style={{marginBottom:14}}>
+                <h3 style={{margin:"0 0 6px",fontSize:12,fontWeight:700,color:"#9CA3AF",textTransform:"uppercase",letterSpacing:.5}}>{rt}</h3>
+                <div style={{background:"#fff",borderRadius:12,border:"1.5px solid #E5E7EB",overflow:"hidden"}}>
+                  {recs.map((r,idx)=>(
+                    <div key={r.id}>
+                      {idx>0&&<div style={{height:1,background:"#F3F4F6",margin:"0 14px"}}/>}
+                      <div style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px"}}>
+                        {r.image?<img src={r.image} style={{width:38,height:38,borderRadius:7,objectFit:"cover",flexShrink:0}} onError={e=>{e.target.style.display="none"}}/>:<div style={{width:38,height:38,borderRadius:7,background:"#F3F4F6",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:16}}>🍽️</div>}
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:600,fontSize:13,color:"#111",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textAlign:"left"}}>{r.title}</div>
+                          {r.useCount>0&&<div style={{fontSize:10,color:"#F97316",fontWeight:600}}>Añadida al menu {r.useCount} {r.useCount===1?"vez":"veces"}</div>}
+                        </div>
+                        <div style={{display:"flex",gap:6,flexShrink:0}}>
+                          <button onClick={()=>setAddMenuRecipe(r)} style={{padding:"5px 9px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:7,cursor:"pointer",fontSize:11,fontWeight:600,color:"#F97316"}}>+ Menu</button>
+                          <button onClick={()=>{if(window.confirm("Eliminar "+r.title+"?"))onDelete(r.id);}} style={{padding:"5px 9px",background:"#FEF2F2",border:"1px solid #FCA5A5",borderRadius:7,cursor:"pointer",fontSize:11,fontWeight:600,color:"#EF4444"}}>🗑</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+      {recipes.length===0&&<div style={{textAlign:"center",padding:"50px",color:"#9CA3AF"}}><div style={{fontSize:44,marginBottom:10}}>📋</div><p>No hay recetas guardadas</p></div>}
+      {addMenuRecipe&&<AddToMenuModal open={true} onClose={()=>setAddMenuRecipe(null)} recipe={addMenuRecipe} saveMenu={saveMenu} weekMenu={weekMenu} weekOffset={weekOffset} onUseRecipe={onUseRecipe}/>}
+    </div>
+  );
+}
+
 
 const LOGO_IMG = "data:image/jpeg;base64,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";
 
@@ -621,7 +691,7 @@ export default function App(){
       setLoadingData(true);
       try{
         const {data:recs}=await supabase.from("recipes").select("*").order("created_at",{ascending:false});
-        if(recs)setRecipes(recs.map(r=>({id:r.id,title:r.title,description:r.description||"",image:r.image||"",mealType:r.meal_type||"Comida",recipeType:r.recipe_type||"Otros platos",ingredients:r.ingredients||[],steps:r.steps||[],sourceUrl:r.source_url||"",time:r.time||"",servings:r.servings||4,rating:r.rating||0})));
+        if(recs)setRecipes(recs.map(r=>({id:r.id,title:r.title,description:r.description||"",image:r.image||"",mealType:r.meal_type||"Comida",recipeType:r.recipe_type||"Otros platos",ingredients:r.ingredients||[],steps:r.steps||[],sourceUrl:r.source_url||"",time:r.time||"",servings:r.servings||4,rating:r.rating||0,useCount:r.use_count||0})));
         const {data:menu}=await supabase.from("week_menu").select("*");
         if(menu){const m={};menu.forEach(x=>{if(!m[x.week_key])m[x.week_key]={};if(!m[x.week_key][x.day])m[x.week_key][x.day]={};if(!m[x.week_key][x.day][x.slot])m[x.week_key][x.day][x.slot]=[];if(x.recipe_data)m[x.week_key][x.day][x.slot].push(x.recipe_data);});setWeekMenu(m);}
       }catch(e){console.error(e);}
@@ -631,7 +701,9 @@ export default function App(){
   },[]);
 
   async function addRecipe(r){
-    await supabase.from("recipes").insert({id:r.id,title:r.title,description:r.description,image:r.image,meal_type:r.mealType,recipe_type:r.recipeType,ingredients:r.ingredients,steps:r.steps,source_url:r.sourceUrl,time:r.time,servings:r.servings,rating:r.rating||0});
+    const existing=recipes.find(x=>x.title.toLowerCase().trim()===r.title.toLowerCase().trim());
+    if(existing){alert("Ya tienes una receta con el nombre: "+r.title);return;}
+    await supabase.from("recipes").insert({id:r.id,title:r.title,description:r.description,image:r.image,meal_type:r.mealType,recipe_type:r.recipeType,ingredients:r.ingredients,steps:r.steps,source_url:r.sourceUrl,time:r.time,servings:r.servings,rating:r.rating||0,use_count:r.useCount||0});
     setRecipes(p=>[r,...p]);
   }
 
@@ -642,8 +714,15 @@ export default function App(){
   }
 
   async function updateRecipe(r){
-    await supabase.from("recipes").update({title:r.title,description:r.description,image:r.image,meal_type:r.mealType,recipe_type:r.recipeType,ingredients:r.ingredients,steps:r.steps,source_url:r.sourceUrl,time:r.time,servings:r.servings,rating:r.rating||0}).eq("id",r.id);
+    await supabase.from("recipes").update({title:r.title,description:r.description,image:r.image,meal_type:r.mealType,recipe_type:r.recipeType,ingredients:r.ingredients,steps:r.steps,source_url:r.sourceUrl,time:r.time,servings:r.servings,rating:r.rating||0,use_count:r.useCount||0}).eq("id",r.id);
     setRecipes(p=>p.map(x=>x.id===r.id?r:x));
+  }
+
+  async function updateRecipeCount(id,delta){
+    const r=recipes.find(x=>x.id===id||String(x.id)===String(id));
+    if(!r)return;
+    const newCount=Math.max(0,(r.useCount||0)+delta);
+    await updateRecipe({...r,useCount:newCount});
   }
 
   async function saveMenu(newMenu){
@@ -656,7 +735,7 @@ export default function App(){
     }catch(e){console.error("saveMenu error:",e);}
   }
 
-  const NAV=[{id:"recetas",label:"Recetas",icon:"📖"},{id:"menu",label:"Menu Semanal",icon:"📅"},{id:"compra",label:"Lista de Compra",icon:"🛒"}];
+  const NAV=[{id:"recetas",label:"Recetas",icon:"📖"},{id:"todas",label:"Todas las Recetas",icon:"📋"},{id:"menu",label:"Menu Semanal",icon:"📅"},{id:"compra",label:"Lista de Compra",icon:"🛒"}];
 
   function navigate(id){setPage(id);if(id==="recetas")setDetailId(null);setMenuOpen(false);}
 
@@ -694,8 +773,9 @@ export default function App(){
             <button onClick={()=>setMenuOpen(v=>!v)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#374151",padding:"2px 6px"}}>☰</button>
           </div>
         )}
-        {page==="recetas"&&<RecipesPage recipes={recipes} onAdd={addRecipe} onDelete={deleteRecipe} onUpdate={updateRecipe} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={weekOffset} apiKey={apiKey} onNeedKey={()=>setApiKeyOpen(true)} detailId={detailId} setDetailId={setDetailId} isMobile={isMobile}/>}
-        {page==="menu"&&<WeeklyMenuPage recipes={recipes} weekMenu={weekMenu} saveMenu={saveMenu}/>}
+        {page==="recetas"&&<RecipesPage recipes={recipes} onAdd={addRecipe} onDelete={deleteRecipe} onUpdate={updateRecipe} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={weekOffset} apiKey={apiKey} onNeedKey={()=>setApiKeyOpen(true)} detailId={detailId} setDetailId={setDetailId} isMobile={isMobile} onUseRecipe={updateRecipeCount}/>}
+        {page==="todas"&&<AllRecipesPage recipes={recipes} onDelete={deleteRecipe} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={0} onUseRecipe={updateRecipeCount}/>}
+        {page==="menu"&&<WeeklyMenuPage recipes={recipes} weekMenu={weekMenu} saveMenu={saveMenu} onUseRecipe={updateRecipeCount}/>}
         {page==="compra"&&<ShoppingListPage weekMenu={weekMenu} recipes={recipes}/>}
       </div>
       <ApiKeyModal open={apiKeyOpen} onClose={()=>setApiKeyOpen(false)} apiKey={apiKey} setApiKey={setApiKey}/>
