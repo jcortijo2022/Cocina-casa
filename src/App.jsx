@@ -538,8 +538,24 @@ function ShoppingListPage({weekMenu,recipes}){
 
   // Build grouped ingredients
   const ingMap={};
-  Object.values(menu).forEach(slots=>{Object.values(slots).forEach(rs=>{rs.forEach(r=>{const full=recipes.find(rec=>rec.id===r.id);(full?.ingredients||r.ingredients||[]).forEach(ing=>{const rawName=ing.name.trim();const k=normalizeIngKey(rawName);const capName=cap(rawName);const amt=parseFloat(String(ing.amount).replace(",",".").replace(/[^\d.]/g,""))||0;const unit=(ing.unit||"").toLowerCase().trim();if(!ingMap[k]){ingMap[k]={id:k,name:capName,amount:amt>0?String(amt):(ing.amount||""),unit:ing.unit||"",category:guessCategory(rawName),total:amt,unitKey:unit};}else{const ex=ingMap[k];if(ex.unitKey===unit&&amt>0){ex.total=(ex.total||0)+amt;ex.amount=String(Math.round(ex.total*10)/10);}}});});});});
-
+  Object.values(menu).forEach(slots=>{Object.values(slots).forEach(rs=>{rs.forEach(r=>{
+    const full=recipes.find(rec=>String(rec.id)===String(r.id));
+    (full?.ingredients||r.ingredients||[]).forEach(ing=>{
+      const rawName=(ing.name||'').trim();
+      if(!rawName)return;
+      const k=normalizeIngKey(rawName);
+      const capName=cap(rawName);
+      const amtStr=String(ing.amount||'').trim();
+      const unit=(ing.unit||'').trim();
+      const amtDisplay=amtStr&&amtStr!=='0'?(amtStr+(unit?' '+unit:'')):'al gusto';
+      if(!ingMap[k]){
+        ingMap[k]={id:k,name:capName,amounts:[amtDisplay],category:guessCategory(rawName)};
+      }else{
+        const exists=ingMap[k].amounts.includes(amtDisplay);
+        if(!exists)ingMap[k].amounts.push(amtDisplay);
+      }
+    });
+  });});});
   const allItems=[...Object.values(ingMap),...extras].sort((a,b)=>a.name.localeCompare(b.name,"es"));
   const grouped={};SHOPPING_CATS.forEach(c=>{grouped[c.id]=[];});
   allItems.forEach(item=>{const cat=item.category||"otros";if(grouped[cat])grouped[cat].push(item);else grouped["otros"].push(item);});
