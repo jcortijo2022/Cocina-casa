@@ -268,7 +268,7 @@ function EditIngModal({open,onClose,ingredients,onSave}){
   );
 }
 
-function AddToMenuModal({open,onClose,recipe,saveMenu,weekMenu,weekOffset,onUseRecipe}){
+function AddToMenuModal({open,onClose,recipe,saveMenu,weekMenu,weekOffset,onUseRecipe,onClearDeleted}){
   const [day,setDay]=useState("Lunes");
   const [slot,setSlot]=useState("Comida");
   function add(){
@@ -279,8 +279,8 @@ function AddToMenuModal({open,onClose,recipe,saveMenu,weekMenu,weekOffset,onUseR
     if(!newMenu[key][day][slot])newMenu[key][day][slot]=[];
     if(!newMenu[key][day][slot].find(r=>r.id===recipe.id))newMenu[key][day][slot].push(recipe);
     saveMenu(newMenu);
-    // Increment use counter
-    if(onUseRecipe)onUseRecipe(recipe.id,1);
+    // Clear deleted ingredients for this recipe this week
+    if(onClearDeleted)onClearDeleted(recipe,key);
     onClose();
   }
   return(
@@ -321,7 +321,7 @@ function CardImageUpload({recipe,onUpdate}){
   return(<div style={{width:"100%",height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:5,color:"#C4C4C4",background:"#F9FAFB",cursor:"pointer"}} onClick={e=>{e.stopPropagation();fileRef.current.click();}}><span style={{fontSize:28}}>📷</span><span style={{fontSize:10,fontWeight:500}}>Añadir foto</span><input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} style={{display:"none"}}/></div>);
 }
 
-function RecipeCard({recipe,onOpen,onDelete,onAddMenu,onUpdate}){
+function RecipeCard({recipe,onOpen,onDelete,onAddMenu,onUpdate,getUseCount}){
   const [menuOpen,setMenuOpen]=useState(false);
   const col=MEAL_TYPE_COLORS[recipe.mealType]||MEAL_TYPE_COLORS["Otros"];
   return(
@@ -341,7 +341,7 @@ function RecipeCard({recipe,onOpen,onDelete,onAddMenu,onUpdate}){
         <h3 style={{margin:"0 0 4px",fontSize:13,fontWeight:700,color:"#111",lineHeight:1.3,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{recipe.title}</h3>
         <p style={{margin:"0 0 8px",fontSize:11,color:"#6B7280",lineHeight:1.4,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{recipe.description}</p>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={{display:"flex",gap:8,fontSize:10,color:"#9CA3AF"}}>{recipe.time&&<span>⏱ {recipe.time}</span>}<span>👥 {recipe.servings}p</span>{recipe.useCount>0&&<span style={{color:"#F97316",fontWeight:700}}>×{recipe.useCount}</span>}</div>
+          <div style={{display:"flex",gap:8,fontSize:10,color:"#9CA3AF"}}>{recipe.time&&<span>⏱ {recipe.time}</span>}<span>👥 {recipe.servings}p</span>{(getUseCount?getUseCount(recipe.id):recipe.useCount||0)>0&&<span style={{color:"#F97316",fontWeight:700}}>×{getUseCount?getUseCount(recipe.id):recipe.useCount||0}</span>}</div>
           <StarRating value={recipe.rating} onChange={()=>{}} size={12}/>
         </div>
       </div>
@@ -349,7 +349,7 @@ function RecipeCard({recipe,onOpen,onDelete,onAddMenu,onUpdate}){
   );
 }
 
-function RecipeDetail({recipe,onBack,onDelete,onUpdate,weekMenu,saveMenu,weekOffset,onUseRecipe}){
+function RecipeDetail({recipe,onBack,onDelete,onUpdate,weekMenu,saveMenu,weekOffset,onUseRecipe,onClearDeleted}){
   const [editIngOpen,setEditIngOpen]=useState(false);
   const [addMenuOpen,setAddMenuOpen]=useState(false);
   const scrollRef=useRef();
@@ -412,12 +412,12 @@ function RecipeDetail({recipe,onBack,onDelete,onUpdate,weekMenu,saveMenu,weekOff
         </div>
       </div>)}
       <EditIngModal open={editIngOpen} onClose={()=>setEditIngOpen(false)} ingredients={recipe.ingredients} onSave={ings=>onUpdate({...recipe,ingredients:ings})}/>
-      <AddToMenuModal open={addMenuOpen} onClose={()=>setAddMenuOpen(false)} recipe={recipe} saveMenu={saveMenu} weekMenu={weekMenu} weekOffset={weekOffset} onUseRecipe={onUseRecipe}/>
+      <AddToMenuModal open={addMenuOpen} onClose={()=>setAddMenuOpen(false)} recipe={recipe} saveMenu={saveMenu} weekMenu={weekMenu} weekOffset={weekOffset} onUseRecipe={onUseRecipe} onClearDeleted={onClearDeleted}/>
     </div>
   );
 }
 
-function RecipesPage({recipes,onAdd,onDelete,onUpdate,weekMenu,saveMenu,weekOffset,apiKey,onNeedKey,detailId,setDetailId,isMobile,onUseRecipe}){
+function RecipesPage({recipes,onAdd,onDelete,onUpdate,weekMenu,saveMenu,weekOffset,apiKey,onNeedKey,detailId,setDetailId,isMobile,onUseRecipe,getUseCount,onClearDeleted}){
   const [addOpen,setAddOpen]=useState(false);
   const [addMenuRecipe,setAddMenuRecipe]=useState(null);
   const [search,setSearch]=useState("");
@@ -425,7 +425,7 @@ function RecipesPage({recipes,onAdd,onDelete,onUpdate,weekMenu,saveMenu,weekOffs
   const [filterType,setFilterType]=useState("Todos los tipos");
 
   const detail=detailId?recipes.find(r=>String(r.id)===String(detailId))||null:null;
-  if(detail){return<RecipeDetail recipe={detail} onBack={()=>setDetailId(null)} onDelete={id=>{onDelete(id);setDetailId(null);}} onUpdate={onUpdate} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={weekOffset} onUseRecipe={onUseRecipe}/>;}
+  if(detail){return<RecipeDetail recipe={detail} onBack={()=>setDetailId(null)} onDelete={id=>{onDelete(id);setDetailId(null);}} onUpdate={onUpdate} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={weekOffset} onUseRecipe={onUseRecipe} onClearDeleted={onClearDeleted}/>;}
 
   const filtered=recipes.filter(r=>r.title.toLowerCase().includes(search.toLowerCase())&&(filterMeal==="Todas"||r.mealType===filterMeal)&&(filterType==="Todos los tipos"||r.recipeType===filterType));
 
@@ -446,12 +446,12 @@ function RecipesPage({recipes,onAdd,onDelete,onUpdate,weekMenu,saveMenu,weekOffs
         {filtered.length===0&&<div style={{gridColumn:"1/-1",textAlign:"center",padding:"50px",color:"#9CA3AF"}}><div style={{fontSize:44,marginBottom:10}}>🍽️</div><p>No hay recetas. Anade la primera!</p></div>}
       </div>
       <AddRecipeModal open={addOpen} onClose={()=>setAddOpen(false)} onAdd={r=>{onAdd(r);setAddOpen(false);}} apiKey={apiKey} onNeedKey={()=>{setAddOpen(false);onNeedKey();}}/>
-      {addMenuRecipe&&<AddToMenuModal open={true} onClose={()=>setAddMenuRecipe(null)} recipe={addMenuRecipe} saveMenu={saveMenu} weekMenu={weekMenu} weekOffset={weekOffset} onUseRecipe={onUseRecipe}/>}
+      {addMenuRecipe&&<AddToMenuModal open={true} onClose={()=>setAddMenuRecipe(null)} recipe={addMenuRecipe} saveMenu={saveMenu} weekMenu={weekMenu} weekOffset={weekOffset} onUseRecipe={onUseRecipe} onClearDeleted={onClearDeleted}/>}
     </div>
   );
 }
 
-function WeeklyMenuPage({recipes,weekMenu,saveMenu,onUseRecipe}){
+function WeeklyMenuPage({recipes,weekMenu,saveMenu,onUseRecipe,onClearDeleted}){
   const [weekOffset,setWeekOffset]=useState(0);
   const [copyOpen,setCopyOpen]=useState(false);
   const [pickerOpen,setPickerOpen]=useState(false);
@@ -464,7 +464,12 @@ function WeeklyMenuPage({recipes,weekMenu,saveMenu,onUseRecipe}){
     const nm=JSON.parse(JSON.stringify(weekMenu));
     if(nm[key]&&nm[key][day]&&nm[key][day][slot]){nm[key][day][slot]=nm[key][day][slot].filter(r=>r.id!==id);}
     saveMenu(nm);
-    if(onUseRecipe)onUseRecipe(id,-1);
+    // If recipe no longer in menu this week, clear its deleted ingredients
+    const stillInMenu=Object.values(nm[key]||{}).some(slots=>Object.values(slots).some(rs=>rs.some(r=>String(r.id)===String(id))));
+    if(!stillInMenu){
+      const recipe=recipes.find(r=>String(r.id)===String(id));
+      if(recipe&&onClearDeleted)onClearDeleted(recipe,key);
+    }
   }
 
   function addToMenu(recipe){
@@ -498,7 +503,7 @@ function WeeklyMenuPage({recipes,weekMenu,saveMenu,onUseRecipe}){
   const fp=recipes.filter(r=>r.title.toLowerCase().includes(pickerSearch.toLowerCase()));
 
   return(
-    <div style={{padding:"18px 16px"}}>
+    <div style={{padding:"18px 16px",paddingBottom:80}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:10}}>
         <div><h1 style={{margin:0,fontSize:24,fontWeight:800,color:"#111"}}>Menu Semanal</h1></div>
         <div style={{display:"flex",gap:8}}>
@@ -604,7 +609,7 @@ function ShoppingListPage({weekMenu,recipes,deletedByWeek,setDeletedByWeek}){
   function addExtra(){if(!newItem.trim())return;const n=cap(newItem.trim());setExtras(p=>[...p,{id:"ex-"+Date.now(),name:n,amount:"",unit:"",category:guessCategory(n)}]);setNewItem("");}
 
   return(
-    <div style={{padding:"18px 16px"}}>
+    <div style={{padding:"18px 16px",paddingBottom:80}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:10}}>
         <div><h1 style={{margin:0,fontSize:24,fontWeight:800,color:"#111"}}>Lista de Compra</h1><p style={{margin:"3px 0 0",color:"#9CA3AF",fontSize:12}}>4 personas</p></div>
         <div style={{display:"flex",gap:8}}>
@@ -658,7 +663,7 @@ function ShoppingListPage({weekMenu,recipes,deletedByWeek,setDeletedByWeek}){
   );
 }
 
-function AllRecipesPage({recipes,onDelete,weekMenu,saveMenu,weekOffset,onUseRecipe}){
+function AllRecipesPage({recipes,onDelete,weekMenu,saveMenu,weekOffset,onUseRecipe,getUseCount,onClearDeleted}){
   const [addMenuRecipe,setAddMenuRecipe]=useState(null);
   const [filterMeal,setFilterMeal]=useState("Todas");
   const filteredRecipes=filterMeal==="Todas"?recipes:recipes.filter(r=>r.mealType===filterMeal);
@@ -701,7 +706,7 @@ function AllRecipesPage({recipes,onDelete,weekMenu,saveMenu,weekOffset,onUseReci
                         {r.image?<img src={r.image} style={{width:38,height:38,borderRadius:7,objectFit:"cover",flexShrink:0}} onError={e=>{e.target.style.display="none"}}/>:<div style={{width:38,height:38,borderRadius:7,background:"#F3F4F6",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:16}}>🍽️</div>}
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontWeight:600,fontSize:13,color:"#111",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textAlign:"left"}}>{r.title}</div>
-                          {r.useCount>0&&<div style={{fontSize:10,color:"#F97316",fontWeight:600}}>Añadida al menu {r.useCount} {r.useCount===1?"vez":"veces"}</div>}
+                          {(getUseCount?getUseCount(r.id):0)>0&&<div style={{fontSize:10,color:"#F97316",fontWeight:600}}>Añadida al menu {getUseCount?getUseCount(r.id):0} {(getUseCount?getUseCount(r.id):0)===1?"vez":"veces"}</div>}
                         </div>
                         <div style={{display:"flex",gap:6,flexShrink:0}}>
                           <button onClick={()=>setAddMenuRecipe(r)} style={{padding:"5px 9px",background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:7,cursor:"pointer",fontSize:11,fontWeight:600,color:"#F97316"}}>+ Menu</button>
@@ -717,7 +722,7 @@ function AllRecipesPage({recipes,onDelete,weekMenu,saveMenu,weekOffset,onUseReci
         );
       })}
       {recipes.length===0&&<div style={{textAlign:"center",padding:"50px",color:"#9CA3AF"}}><div style={{fontSize:44,marginBottom:10}}>📋</div><p>No hay recetas guardadas</p></div>}
-      {addMenuRecipe&&<AddToMenuModal open={true} onClose={()=>setAddMenuRecipe(null)} recipe={addMenuRecipe} saveMenu={saveMenu} weekMenu={weekMenu} weekOffset={weekOffset} onUseRecipe={onUseRecipe}/>}
+      {addMenuRecipe&&<AddToMenuModal open={true} onClose={()=>setAddMenuRecipe(null)} recipe={addMenuRecipe} saveMenu={saveMenu} weekMenu={weekMenu} weekOffset={weekOffset} onUseRecipe={onUseRecipe} onClearDeleted={onClearDeleted}/>}
     </div>
   );
 }
@@ -760,7 +765,7 @@ export default function App(){
 
   async function addRecipe(r){
     const existing=recipes.find(x=>x.title.toLowerCase().trim()===r.title.toLowerCase().trim());
-    if(existing){alert("Ya tienes una receta con el nombre: "+r.title);return;}
+    if(existing){if(!window.confirm("Ya tienes una receta llamada '"+r.title+"'. ¿Añadir de todas formas?"))return;}
     await supabase.from("recipes").insert({id:r.id,title:r.title,description:r.description,image:r.image,meal_type:r.mealType,recipe_type:r.recipeType,ingredients:r.ingredients,steps:r.steps,source_url:r.sourceUrl,time:r.time,servings:r.servings,rating:r.rating||0,use_count:r.useCount||0});
     setRecipes(p=>[r,...p]);
   }
@@ -776,11 +781,41 @@ export default function App(){
     setRecipes(p=>p.map(x=>x.id===r.id?r:x));
   }
 
+  function clearRecipeDeletedItems(recipe,weekKey){
+    if(!recipe||!weekKey)return;
+    const ingKeys=(recipe.ingredients||[]).map(ing=>{
+      const rawName=(ing.name||'').trim();
+      return normalizeIngKey(rawName);
+    }).filter(Boolean);
+    if(ingKeys.length===0)return;
+    setDeletedByWeek(p=>{
+      const cur=p[weekKey]||[];
+      const remaining=cur.filter(k=>!ingKeys.includes(k));
+      if(remaining.length===cur.length)return p;
+      const n={...p,[weekKey]:remaining};
+      supabase.from('shopping_deleted').delete()
+        .eq('week_key',weekKey)
+        .in('id',ingKeys)
+        .then(()=>{});
+      return n;
+    });
+  }
+
+  // Counter is computed from weekMenu - always accurate
+  function getRecipeUseCount(id){
+    let count=0;
+    Object.values(weekMenu).forEach(days=>{
+      Object.values(days).forEach(slots=>{
+        Object.values(slots).forEach(rs=>{
+          rs.forEach(r=>{if(String(r.id)===String(id))count++;});
+        });
+      });
+    });
+    return count;
+  }
+
   async function updateRecipeCount(id,delta){
-    const r=recipes.find(x=>x.id===id||String(x.id)===String(id));
-    if(!r)return;
-    const newCount=Math.max(0,(r.useCount||0)+delta);
-    await updateRecipe({...r,useCount:newCount});
+    // No-op - count is now computed from weekMenu
   }
 
   async function saveMenu(newMenu){
@@ -831,9 +866,9 @@ export default function App(){
             <button onClick={()=>setMenuOpen(v=>!v)} style={{background:"none",border:"none",cursor:"pointer",fontSize:22,color:"#374151",padding:"2px 6px"}}>☰</button>
           </div>
         )}
-        {page==="recetas"&&<RecipesPage recipes={recipes} onAdd={addRecipe} onDelete={deleteRecipe} onUpdate={updateRecipe} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={weekOffset} apiKey={apiKey} onNeedKey={()=>setApiKeyOpen(true)} detailId={detailId} setDetailId={setDetailId} isMobile={isMobile} onUseRecipe={updateRecipeCount}/>}
-        {page==="todas"&&<AllRecipesPage recipes={recipes} onDelete={deleteRecipe} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={0} onUseRecipe={updateRecipeCount}/>}
-        {page==="menu"&&<WeeklyMenuPage recipes={recipes} weekMenu={weekMenu} saveMenu={saveMenu} onUseRecipe={updateRecipeCount}/>}
+        {page==="recetas"&&<RecipesPage recipes={recipes} onAdd={addRecipe} onDelete={deleteRecipe} onUpdate={updateRecipe} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={weekOffset} apiKey={apiKey} onNeedKey={()=>setApiKeyOpen(true)} detailId={detailId} setDetailId={setDetailId} isMobile={isMobile} onUseRecipe={updateRecipeCount} getUseCount={getRecipeUseCount} onClearDeleted={clearRecipeDeletedItems}/>}
+        {page==="todas"&&<AllRecipesPage recipes={recipes} onDelete={deleteRecipe} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={0} onUseRecipe={updateRecipeCount} getUseCount={getRecipeUseCount} onClearDeleted={clearRecipeDeletedItems}/>}
+        {page==="menu"&&<WeeklyMenuPage recipes={recipes} weekMenu={weekMenu} saveMenu={saveMenu} onUseRecipe={updateRecipeCount} getUseCount={getRecipeUseCount} onClearDeleted={clearRecipeDeletedItems}/>}
         {page==="compra"&&<ShoppingListPage weekMenu={weekMenu} recipes={recipes} deletedByWeek={deletedByWeek} setDeletedByWeek={setDeletedByWeek}/>}
       </div>
       <ApiKeyModal open={apiKeyOpen} onClose={()=>setApiKeyOpen(false)} apiKey={apiKey} setApiKey={setApiKey}/>
