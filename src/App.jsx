@@ -7,7 +7,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const MEAL_TYPES = ["Comida","Cena","Fin de Semana","Postre","Entrante","Verano","Salsas","Otros"];
 const RECIPE_TYPES = ["Carne","Guisos","Pescados","Arroz y Pasta","Verdura","Otros platos"];
-const DAYS = ["Lunes","Martes","Miercoles","Jueves","Viernes","Sabado","Domingo"];
+const DAYS = ["Sabado","Domingo","Lunes","Martes","Miercoles","Jueves","Viernes"];
 const MEAL_SLOTS = ["Comida","Cena"];
 const MEAL_TYPE_COLORS = {
   "Comida":{"bg":"#F97316","text":"#fff"},
@@ -38,8 +38,27 @@ const S={
   sel:{padding:"6px 12px",borderRadius:20,border:"2px solid #E5E7EB",background:"#fff",color:"#111",fontWeight:600,fontSize:12,cursor:"pointer"},
 };
 
-function getWeekKey(off=0){const n=new Date();const d=n.getDay();const diff=n.getDate()-d+(d===0?-6:1);const m=new Date(new Date().setDate(diff+off*7));return m.toISOString().split("T")[0];}
-function getWeekDates(off=0){const n=new Date();const d=n.getDay();const diff=n.getDate()-d+(d===0?-6:1);const mon=new Date(new Date().setDate(diff+off*7));const sun=new Date(mon);sun.setDate(mon.getDate()+6);const f=x=>x.toLocaleDateString("es-ES",{day:"numeric",month:"short"});return f(mon)+" - "+f(sun);}
+function getWeekKey(off=0){
+  const n=new Date();
+  const day=n.getDay(); // 0=Sun,1=Mon,...,6=Sat
+  const diffToSat=(day===6)?0:(day===0)?-1:-(day+1);
+  const sat=new Date();
+  sat.setDate(n.getDate()+diffToSat+off*7);
+  sat.setHours(0,0,0,0);
+  return sat.toISOString().split("T")[0];
+}
+function getWeekDates(off=0){
+  const n=new Date();
+  const day=n.getDay();
+  const diffToSat=(day===6)?0:(day===0)?-1:-(day+1);
+  const sat=new Date();
+  sat.setDate(n.getDate()+diffToSat+off*7);
+  sat.setHours(0,0,0,0);
+  const fri=new Date(sat);
+  fri.setDate(sat.getDate()+6);
+  const f=x=>x.toLocaleDateString("es-ES",{day:"numeric",month:"short"});
+  return f(sat)+" - "+f(fri);
+}
 
 function normalizeIngKey(name){
   const n=name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim();
@@ -336,6 +355,9 @@ function RecipeDetail({recipe,onBack,onDelete,onUpdate,weekMenu,saveMenu,weekOff
   const scrollRef=useRef();
   useEffect(()=>{document.getElementById("main-scroll")?.scrollTo({top:0,behavior:"instant"});},[recipe?.id]);
   const col=MEAL_TYPE_COLORS[recipe.mealType]||MEAL_TYPE_COLORS["Otros"];
+  const [editingTitle,setEditingTitle]=useState(false);
+  const [titleVal,setTitleVal]=useState(recipe.title);
+  useEffect(()=>{setTitleVal(recipe.title);},[recipe.title]);
   function upd(f,v){onUpdate({...recipe,[f]:v});}
   const steps=Array.isArray(recipe.steps)?recipe.steps:(recipe.steps||"").split("\n").filter(s=>s.trim());
   return(
@@ -349,7 +371,17 @@ function RecipeDetail({recipe,onBack,onDelete,onUpdate,weekMenu,saveMenu,weekOff
         <select value={recipe.mealType} onChange={e=>upd("mealType",e.target.value)} style={{...S.sel,border:"2px solid "+col.bg,background:col.bg,color:col.text}}>{MEAL_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
         <select value={recipe.recipeType} onChange={e=>upd("recipeType",e.target.value)} style={S.sel}>{RECIPE_TYPES.map(t=><option key={t} value={t}>{t}</option>)}</select>
       </div>
-      <h1 style={{fontSize:22,fontWeight:800,color:"#111",marginBottom:6,textAlign:"left"}}>{recipe.title}</h1>
+      {editingTitle?(
+        <div style={{display:"flex",gap:8,marginBottom:6}}>
+          <input value={titleVal} onChange={e=>setTitleVal(e.target.value)} style={{flex:1,padding:"8px 12px",borderRadius:9,border:"2px solid #F97316",fontSize:18,fontWeight:800,color:"#111",outline:"none"}} autoFocus onKeyDown={e=>{if(e.key==="Enter"){upd("title",titleVal);setEditingTitle(false);}if(e.key==="Escape")setEditingTitle(false);}}/>
+          <button onClick={()=>{upd("title",titleVal);setEditingTitle(false);}} style={{padding:"8px 14px",background:"#F97316",color:"#fff",border:"none",borderRadius:9,cursor:"pointer",fontWeight:700}}>✓</button>
+          <button onClick={()=>setEditingTitle(false)} style={{padding:"8px 12px",background:"#F3F4F6",border:"none",borderRadius:9,cursor:"pointer",color:"#111"}}>✕</button>
+        </div>
+      ):(
+        <h1 onClick={()=>setEditingTitle(true)} style={{fontSize:22,fontWeight:800,color:"#111",marginBottom:6,textAlign:"left",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+          {recipe.title}<span style={{fontSize:14,color:"#C4C4C4",fontWeight:400}}>✏️</span>
+        </h1>
+      )}
       <p style={{fontSize:13,color:"#6B7280",marginBottom:12,lineHeight:1.6,textAlign:"left"}}>{recipe.description}</p>
       <div style={{display:"flex",gap:16,marginBottom:12,fontSize:13,color:"#6B7280"}}>{recipe.time&&<span>⏱ {recipe.time}</span>}<span>👥 {recipe.servings} porciones</span></div>
       {recipe.sourceUrl&&<div style={{textAlign:"left",marginBottom:14}}><a href={recipe.sourceUrl} target="_blank" rel="noopener noreferrer" style={{display:"inline-flex",alignItems:"center",gap:5,color:"#F97316",fontWeight:600,fontSize:13,textDecoration:"none"}}>🔗 Ver fuente original</a></div>}
@@ -459,6 +491,8 @@ function WeeklyMenuPage({recipes,weekMenu,saveMenu,onUseRecipe}){
     }catch(e){}
   }
 
+  function clearDeleted(){setDeletedByWeek(p=>{const n={...p};delete n[key];supabase.from('shopping_deleted').delete().eq('week_key',key).then(()=>{});return n;});}
+
   function buildWA(){let t="Menu Semanal - "+getWeekDates(weekOffset)+"\n\n";DAYS.forEach(day=>{const slots=menu[day];if(!slots)return;t+=day+"\n";MEAL_SLOTS.forEach(slot=>{const items=slots[slot];if(items&&items.length)t+="  "+slot+": "+items.map(r=>r.title).join(", ")+"\n";});t+="\n";});window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank");}
 
   const fp=recipes.filter(r=>r.title.toLowerCase().includes(pickerSearch.toLowerCase()));
@@ -527,7 +561,7 @@ function WeeklyMenuPage({recipes,weekMenu,saveMenu,onUseRecipe}){
   );
 }
 
-function ShoppingListPage({weekMenu,recipes}){
+function ShoppingListPage({weekMenu,recipes,deletedByWeek,setDeletedByWeek}){
   const [weekOffset,setWeekOffset]=useState(0);
   const [checked,setChecked]=useState({});
   const [extras,setExtras]=useState([]);
@@ -556,10 +590,14 @@ function ShoppingListPage({weekMenu,recipes}){
       }
     });
   });});});
-  const allItems=[...Object.values(ingMap),...extras].sort((a,b)=>a.name.localeCompare(b.name,"es"));
+  const weekDeletedKeys=(deletedByWeek||{})[key]||[];
+  const allItems=[...Object.values(ingMap).filter(i=>!weekDeletedKeys.includes(i.id)),...extras].sort((a,b)=>a.name.localeCompare(b.name,"es"));
   const grouped={};SHOPPING_CATS.forEach(c=>{grouped[c.id]=[];});
   allItems.forEach(item=>{const cat=item.category||"otros";if(grouped[cat])grouped[cat].push(item);else grouped["otros"].push(item);});
   const checkedCount=allItems.filter(i=>checked[i.id]).length;
+  function deleteItem(itemId){setDeletedByWeek(p=>{const cur=(p[key]||[]);if(cur.includes(itemId))return p;const n={...p,[key]:[...cur,itemId]};supabase.from('shopping_deleted').insert({id:itemId,week_key:key}).then(()=>{});return n;});setChecked(p=>{const n={...p};delete n[itemId];return n;});}
+
+  function clearDeleted(){setDeletedByWeek(p=>{const n={...p};delete n[key];supabase.from('shopping_deleted').delete().eq('week_key',key).then(()=>{});return n;});}
 
   function buildWA(){let t="Lista de la Compra\n\n";SHOPPING_CATS.forEach(c=>{const items=grouped[c.id];if(!items.length)return;t+=c.emoji+" "+c.label+"\n";items.forEach(i=>{t+="  - "+i.name+(i.amounts&&i.amounts.length?" ("+i.amounts.join(" + ")+")":"")+"\n";});t+="\n";});window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank");}
   function copyList(){let t="";SHOPPING_CATS.forEach(c=>{const items=grouped[c.id];if(!items.length)return;t+=c.label+":\n";items.forEach(i=>{t+="  - "+i.name+(i.amounts&&i.amounts.length?" ("+i.amounts.join(" + ")+")":"")+"\n";});t+="\n";});navigator.clipboard.writeText(t).catch(()=>{});}
@@ -578,8 +616,9 @@ function ShoppingListPage({weekMenu,recipes}){
         <button onClick={()=>setWeekOffset(v=>v-1)} style={{background:"#F3F4F6",border:"none",borderRadius:8,padding:"7px 13px",cursor:"pointer",fontSize:18,color:"#374151",fontWeight:700}}>‹</button>
         <span style={{fontWeight:700,fontSize:14,color:"#111"}}>{getWeekDates(weekOffset)}</span>
         <button onClick={()=>setWeekOffset(v=>v+1)} style={{background:"#F3F4F6",border:"none",borderRadius:8,padding:"7px 13px",cursor:"pointer",fontSize:18,color:"#374151",fontWeight:700}}>›</button>
+        {weekDeletedKeys.length>0&&<button onClick={clearDeleted} style={{background:"#F3F4F6",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer",fontSize:11,color:"#9CA3AF"}}>↺ Restaurar</button>}
       </div>
-      {checkedCount>0&&(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,padding:"10px 14px",background:"#F0FDF4",borderRadius:9}}><span style={{color:"#16A34A",fontWeight:600,fontSize:13}}>✓ {checkedCount} marcados</span><button onClick={()=>{const ids=Object.entries(checked).filter(([,v])=>v).map(([k])=>k);setExtras(p=>p.filter(i=>!ids.includes(i.id)));setChecked(p=>{const n={...p};ids.forEach(id=>delete n[id]);return n;});}} style={{background:"#FEE2E2",border:"none",borderRadius:7,padding:"6px 11px",cursor:"pointer",color:"#EF4444",fontWeight:600,fontSize:12}}>🗑️ Eliminar marcados</button></div>)}
+      {checkedCount>0&&(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,padding:"10px 14px",background:"#F0FDF4",borderRadius:9}}><span style={{color:"#16A34A",fontWeight:600,fontSize:13}}>✓ {checkedCount} marcados</span><button onClick={()=>{const ids=Object.entries(checked).filter(([,v])=>v).map(([k])=>k);setExtras(p=>p.filter(i=>!ids.includes(i.id)));setDeletedByWeek(p=>{const cur=p[key]||[];const n={...p,[key]:[...new Set([...cur,...ids])]};supabase.from('shopping_deleted').upsert(ids.map(id=>({id,week_key:key}))).then(()=>{});return n;});setChecked({});setChecked({});}} style={{background:"#FEE2E2",border:"none",borderRadius:7,padding:"6px 11px",cursor:"pointer",color:"#EF4444",fontWeight:600,fontSize:12}}>🗑️ Eliminar marcados</button></div>)}
       <div style={{display:"flex",gap:9,marginBottom:20}}>
         <input value={newItem} onChange={e=>setNewItem(e.target.value)} placeholder="Anadir alimento..." onKeyDown={e=>e.key==="Enter"&&addExtra()} style={{...S.input,flex:1}}/>
         <button onClick={addExtra} style={{padding:"11px 16px",background:"#F97316",color:"#fff",border:"none",borderRadius:11,fontWeight:700,fontSize:17,cursor:"pointer"}}>+</button>
@@ -597,7 +636,7 @@ function ShoppingListPage({weekMenu,recipes}){
                 <span style={{flex:1,fontSize:13,fontWeight:500,color:checked[item.id]?"#9CA3AF":"#111",textDecoration:checked[item.id]?"line-through":"none",textAlign:"left"}}>
                   {item.name}{item.amounts&&item.amounts.filter(a=>a&&a!=='al gusto'||item.amounts.length===1).length>0&&<span style={{color:"#9CA3AF",fontWeight:400,marginLeft:5}}>({item.amounts.join(', ')})</span>}
                 </span>
-                {checked[item.id]?<button onClick={()=>{setExtras(p=>p.filter(i=>i.id!==item.id));setChecked(p=>{const n={...p};delete n[item.id];return n;});}} style={{background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:14}}>🗑️</button>:<button onClick={()=>setEditItem({...item})} style={{background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",fontSize:14}}>✏️</button>}
+                {checked[item.id]?<button onClick={()=>{setExtras(p=>p.filter(i=>i.id!==item.id));deleteItem(item.id);setChecked(p=>{const n={...p};delete n[item.id];return n;});}} style={{background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:14}}>🗑️</button>:<button onClick={()=>setEditItem({...item})} style={{background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",fontSize:14}}>✏️</button>}
               </div>
             </div>))}
           </div>
@@ -691,6 +730,7 @@ export default function App(){
   const [recipes,setRecipes]=useState([]);
   const [weekMenu,setWeekMenu]=useState({});
   const [loadingData,setLoadingData]=useState(true);
+  const [deletedByWeek,setDeletedByWeek]=useState({});
   const [apiKey,setApiKey]=useState(()=>localStorage.getItem("cocina_api_key")||"");
   const [apiKeyOpen,setApiKeyOpen]=useState(false);
   const [detailId,setDetailId]=useState(null);
@@ -708,6 +748,8 @@ export default function App(){
       try{
         const {data:recs}=await supabase.from("recipes").select("*").order("created_at",{ascending:false});
         if(recs)setRecipes(recs.map(r=>({id:r.id,title:r.title,description:r.description||"",image:r.image||"",mealType:r.meal_type||"Comida",recipeType:r.recipe_type||"Otros platos",ingredients:r.ingredients||[],steps:r.steps||[],sourceUrl:r.source_url||"",time:r.time||"",servings:r.servings||4,rating:r.rating||0,useCount:r.use_count||0})));
+        const {data:deleted}=await supabase.from("shopping_deleted").select("id,week_key");
+        if(deleted){const dbw={};deleted.forEach(d=>{if(!dbw[d.week_key])dbw[d.week_key]=[];dbw[d.week_key].push(d.id);});setDeletedByWeek(dbw);}
         const {data:menu}=await supabase.from("week_menu").select("*");
         if(menu){const m={};menu.forEach(x=>{if(!m[x.week_key])m[x.week_key]={};if(!m[x.week_key][x.day])m[x.week_key][x.day]={};if(!m[x.week_key][x.day][x.slot])m[x.week_key][x.day][x.slot]=[];if(x.recipe_data)m[x.week_key][x.day][x.slot].push(x.recipe_data);});setWeekMenu(m);}
       }catch(e){console.error(e);}
@@ -792,7 +834,7 @@ export default function App(){
         {page==="recetas"&&<RecipesPage recipes={recipes} onAdd={addRecipe} onDelete={deleteRecipe} onUpdate={updateRecipe} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={weekOffset} apiKey={apiKey} onNeedKey={()=>setApiKeyOpen(true)} detailId={detailId} setDetailId={setDetailId} isMobile={isMobile} onUseRecipe={updateRecipeCount}/>}
         {page==="todas"&&<AllRecipesPage recipes={recipes} onDelete={deleteRecipe} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={0} onUseRecipe={updateRecipeCount}/>}
         {page==="menu"&&<WeeklyMenuPage recipes={recipes} weekMenu={weekMenu} saveMenu={saveMenu} onUseRecipe={updateRecipeCount}/>}
-        {page==="compra"&&<ShoppingListPage weekMenu={weekMenu} recipes={recipes}/>}
+        {page==="compra"&&<ShoppingListPage weekMenu={weekMenu} recipes={recipes} deletedByWeek={deletedByWeek} setDeletedByWeek={setDeletedByWeek}/>}
       </div>
       <ApiKeyModal open={apiKeyOpen} onClose={()=>setApiKeyOpen(false)} apiKey={apiKey} setApiKey={setApiKey}/>
     </div>
