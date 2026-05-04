@@ -566,10 +566,9 @@ function WeeklyMenuPage({recipes,weekMenu,saveMenu,onUseRecipe,onClearDeleted}){
   );
 }
 
-function ShoppingListPage({weekMenu,recipes,deletedByWeek,setDeletedByWeek}){
+function ShoppingListPage({weekMenu,recipes,deletedByWeek,setDeletedByWeek,extras,setExtras}){
   const [weekOffset,setWeekOffset]=useState(0);
   const [checked,setChecked]=useState({});
-  const [extras,setExtras]=useState([]);
   const [newItem,setNewItem]=useState("");
   const [editItem,setEditItem]=useState(null);
   const key=getWeekKey(weekOffset);
@@ -606,7 +605,7 @@ function ShoppingListPage({weekMenu,recipes,deletedByWeek,setDeletedByWeek}){
 
   function buildWA(){let t="Lista de la Compra\n\n";SHOPPING_CATS.forEach(c=>{const items=grouped[c.id];if(!items.length)return;t+=c.emoji+" "+c.label+"\n";items.forEach(i=>{t+="  - "+i.name+(i.amounts&&i.amounts.length?" ("+i.amounts.join(" + ")+")":"")+"\n";});t+="\n";});window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank");}
   function copyList(){let t="";SHOPPING_CATS.forEach(c=>{const items=grouped[c.id];if(!items.length)return;t+=c.label+":\n";items.forEach(i=>{t+="  - "+i.name+(i.amounts&&i.amounts.length?" ("+i.amounts.join(" + ")+")":"")+"\n";});t+="\n";});navigator.clipboard.writeText(t).catch(()=>{});}
-  function addExtra(){if(!newItem.trim())return;const n=cap(newItem.trim());setExtras(p=>[...p,{id:"ex-"+Date.now(),name:n,amount:"",unit:"",category:guessCategory(n)}]);setNewItem("");}
+  function addExtra(){if(!newItem.trim())return;const n=cap(newItem.trim());const item={id:"ex-"+Date.now(),name:n,amount:"",unit:"",category:guessCategory(n)};setExtras(p=>[...p,item]);supabase.from("shopping_extras").insert({id:item.id,name:item.name,amount:item.amount,unit:item.unit,category:item.category}).then(()=>{});setNewItem("");}
 
   return(
     <div style={{padding:"18px 16px",paddingBottom:80}}>
@@ -736,6 +735,7 @@ export default function App(){
   const [weekMenu,setWeekMenu]=useState({});
   const [loadingData,setLoadingData]=useState(true);
   const [deletedByWeek,setDeletedByWeek]=useState({});
+  const [extras,setExtras]=useState([]);
   const [apiKey,setApiKey]=useState(()=>localStorage.getItem("cocina_api_key")||"");
   const [apiKeyOpen,setApiKeyOpen]=useState(false);
   const [detailId,setDetailId]=useState(null);
@@ -754,6 +754,8 @@ export default function App(){
         const {data:recs}=await supabase.from("recipes").select("*").order("created_at",{ascending:false});
         if(recs)setRecipes(recs.map(r=>({id:r.id,title:r.title,description:r.description||"",image:r.image||"",mealType:r.meal_type||"Comida",recipeType:r.recipe_type||"Otros platos",ingredients:r.ingredients||[],steps:r.steps||[],sourceUrl:r.source_url||"",time:r.time||"",servings:r.servings||4,rating:r.rating||0,useCount:r.use_count||0})));
         const {data:deleted}=await supabase.from("shopping_deleted").select("id,week_key");
+        const {data:extrasData}=await supabase.from("shopping_extras").select("*");
+        if(extrasData)setExtras(extrasData.map(e=>({id:e.id,name:e.name,amount:e.amount||'',unit:e.unit||'',category:e.category||'otros'})));
         if(deleted){const dbw={};deleted.forEach(d=>{if(!dbw[d.week_key])dbw[d.week_key]=[];dbw[d.week_key].push(d.id);});setDeletedByWeek(dbw);}
         const {data:menu}=await supabase.from("week_menu").select("*");
         if(menu){const m={};menu.forEach(x=>{if(!m[x.week_key])m[x.week_key]={};if(!m[x.week_key][x.day])m[x.week_key][x.day]={};if(!m[x.week_key][x.day][x.slot])m[x.week_key][x.day][x.slot]=[];if(x.recipe_data)m[x.week_key][x.day][x.slot].push(x.recipe_data);});setWeekMenu(m);}
@@ -869,7 +871,7 @@ export default function App(){
         {page==="recetas"&&<RecipesPage recipes={recipes} onAdd={addRecipe} onDelete={deleteRecipe} onUpdate={updateRecipe} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={weekOffset} apiKey={apiKey} onNeedKey={()=>setApiKeyOpen(true)} detailId={detailId} setDetailId={setDetailId} isMobile={isMobile} onUseRecipe={updateRecipeCount} getUseCount={getRecipeUseCount} onClearDeleted={clearRecipeDeletedItems}/>}
         {page==="todas"&&<AllRecipesPage recipes={recipes} onDelete={deleteRecipe} weekMenu={weekMenu} saveMenu={saveMenu} weekOffset={0} onUseRecipe={updateRecipeCount} getUseCount={getRecipeUseCount} onClearDeleted={clearRecipeDeletedItems}/>}
         {page==="menu"&&<WeeklyMenuPage recipes={recipes} weekMenu={weekMenu} saveMenu={saveMenu} onUseRecipe={updateRecipeCount} getUseCount={getRecipeUseCount} onClearDeleted={clearRecipeDeletedItems}/>}
-        {page==="compra"&&<ShoppingListPage weekMenu={weekMenu} recipes={recipes} deletedByWeek={deletedByWeek} setDeletedByWeek={setDeletedByWeek}/>}
+        {page==="compra"&&<ShoppingListPage weekMenu={weekMenu} recipes={recipes} deletedByWeek={deletedByWeek} setDeletedByWeek={setDeletedByWeek} extras={extras} setExtras={setExtras}/>}
       </div>
       <ApiKeyModal open={apiKeyOpen} onClose={()=>setApiKeyOpen(false)} apiKey={apiKey} setApiKey={setApiKey}/>
     </div>
