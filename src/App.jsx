@@ -595,7 +595,8 @@ function ShoppingListPage({weekMenu,recipes,deletedByWeek,setDeletedByWeek,extra
     });
   });});});
   const weekDeletedKeys=(deletedByWeek||{})[key]||[];
-  const allItems=[...Object.values(ingMap).filter(i=>!weekDeletedKeys.includes(i.id)),...extras].sort((a,b)=>a.name.localeCompare(b.name,"es"));
+  const weekExtras=(extras||[]).filter(e=>e.weekKey===key);
+  const allItems=[...Object.values(ingMap).filter(i=>!weekDeletedKeys.includes(i.id)),...weekExtras].sort((a,b)=>a.name.localeCompare(b.name,"es"));
   const grouped={};SHOPPING_CATS.forEach(c=>{grouped[c.id]=[];});
   allItems.forEach(item=>{const cat=item.category||"otros";if(grouped[cat])grouped[cat].push(item);else grouped["otros"].push(item);});
   const checkedCount=allItems.filter(i=>checked[i.id]).length;
@@ -605,7 +606,7 @@ function ShoppingListPage({weekMenu,recipes,deletedByWeek,setDeletedByWeek,extra
 
   function buildWA(){let t="Lista de la Compra\n\n";SHOPPING_CATS.forEach(c=>{const items=grouped[c.id];if(!items.length)return;t+=c.emoji+" "+c.label+"\n";items.forEach(i=>{t+="  - "+i.name+(i.amounts&&i.amounts.length?" ("+i.amounts.join(" + ")+")":"")+"\n";});t+="\n";});window.open("https://wa.me/?text="+encodeURIComponent(t),"_blank");}
   function copyList(){let t="";SHOPPING_CATS.forEach(c=>{const items=grouped[c.id];if(!items.length)return;t+=c.label+":\n";items.forEach(i=>{t+="  - "+i.name+(i.amounts&&i.amounts.length?" ("+i.amounts.join(" + ")+")":"")+"\n";});t+="\n";});navigator.clipboard.writeText(t).catch(()=>{});}
-  function addExtra(){if(!newItem.trim())return;const n=cap(newItem.trim());const item={id:"ex-"+Date.now(),name:n,amount:"",unit:"",category:guessCategory(n)};setExtras(p=>[...p,item]);supabase.from("shopping_extras").insert({id:item.id,name:item.name,amount:item.amount,unit:item.unit,category:item.category}).then(()=>{});setNewItem("");}
+  function addExtra(){if(!newItem.trim())return;const n=cap(newItem.trim());const item={id:"ex-"+Date.now(),name:n,amount:"",unit:"",category:guessCategory(n),weekKey:key};setExtras(p=>[...p,item]);supabase.from("shopping_extras").insert({id:item.id,name:item.name,amount:item.amount,unit:item.unit,category:item.category,week_key:key}).then(()=>{});setNewItem("");}
 
   return(
     <div style={{padding:"18px 16px",paddingBottom:80}}>
@@ -640,7 +641,7 @@ function ShoppingListPage({weekMenu,recipes,deletedByWeek,setDeletedByWeek,extra
                 <span style={{flex:1,fontSize:13,fontWeight:500,color:checked[item.id]?"#9CA3AF":"#111",textDecoration:checked[item.id]?"line-through":"none",textAlign:"left"}}>
                   {item.name}{item.amounts&&item.amounts.filter(a=>a&&a!=='al gusto'||item.amounts.length===1).length>0&&<span style={{color:"#9CA3AF",fontWeight:400,marginLeft:5}}>({item.amounts.join(', ')})</span>}
                 </span>
-                {checked[item.id]?<button onClick={()=>{setExtras(p=>p.filter(i=>i.id!==item.id));deleteItem(item.id);setChecked(p=>{const n={...p};delete n[item.id];return n;});}} style={{background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:14}}>🗑️</button>:<button onClick={()=>setEditItem({...item})} style={{background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",fontSize:14}}>✏️</button>}
+                {checked[item.id]?<button onClick={()=>{supabase.from("shopping_extras").delete().eq("id",item.id).then(()=>{});setExtras(p=>p.filter(i=>i.id!==item.id));deleteItem(item.id);setChecked(p=>{const n={...p};delete n[item.id];return n;});}} style={{background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:14}}>🗑️</button>:<button onClick={()=>setEditItem({...item,amount:item.amount||(item.amounts?item.amounts.join(", "):""),unit:item.unit||""})} style={{background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",fontSize:14}}>✏️</button>}
               </div>
             </div>))}
           </div>
@@ -655,7 +656,7 @@ function ShoppingListPage({weekMenu,recipes,deletedByWeek,setDeletedByWeek,extra
         <div style={{marginBottom:16}}><label style={{fontSize:12,fontWeight:600,color:"#374151",display:"block",marginBottom:3}}>Nombre</label><input value={editItem.name} onChange={e=>setEditItem(p=>({...p,name:e.target.value}))} style={{...S.input}}/></div>
         <div style={{display:"flex",gap:10}}>
           <button onClick={()=>setEditItem(null)} style={{flex:1,padding:"10px",background:"#F3F4F6",border:"none",borderRadius:9,cursor:"pointer",fontWeight:600,color:"#111"}}>Cancelar</button>
-          <button onClick={()=>{setExtras(p=>{const idx=p.findIndex(i=>i.id===editItem.id);if(idx>=0){const n=[...p];n[idx]=editItem;return n;}return p;});setEditItem(null);}} style={{flex:1,padding:"10px",background:"#F97316",color:"#fff",border:"none",borderRadius:9,cursor:"pointer",fontWeight:700}}>Guardar</button>
+          <button onClick={()=>{setExtras(p=>{const idx=p.findIndex(i=>i.id===editItem.id);if(idx>=0){const n=[...p];n[idx]={...editItem,amounts:[editItem.amount].filter(Boolean)};supabase.from("shopping_extras").update({name:editItem.name,amount:editItem.amount,unit:editItem.unit}).eq("id",editItem.id).then(()=>{});return n;}return p;});setEditItem(null);}} style={{flex:1,padding:"10px",background:"#F97316",color:"#fff",border:"none",borderRadius:9,cursor:"pointer",fontWeight:700}}>Guardar</button>
         </div></>)}
       </Modal>
     </div>
@@ -755,7 +756,7 @@ export default function App(){
         if(recs)setRecipes(recs.map(r=>({id:r.id,title:r.title,description:r.description||"",image:r.image||"",mealType:r.meal_type||"Comida",recipeType:r.recipe_type||"Otros platos",ingredients:r.ingredients||[],steps:r.steps||[],sourceUrl:r.source_url||"",time:r.time||"",servings:r.servings||4,rating:r.rating||0,useCount:r.use_count||0})));
         const {data:deleted}=await supabase.from("shopping_deleted").select("id,week_key");
         const {data:extrasData}=await supabase.from("shopping_extras").select("*");
-        if(extrasData)setExtras(extrasData.map(e=>({id:e.id,name:e.name,amount:e.amount||'',unit:e.unit||'',category:e.category||'otros'})));
+        if(extrasData)setExtras(extrasData.map(e=>({id:e.id,name:e.name,amount:e.amount||'',unit:e.unit||'',category:e.category||'otros',weekKey:e.week_key||''})));
         if(deleted){const dbw={};deleted.forEach(d=>{if(!dbw[d.week_key])dbw[d.week_key]=[];dbw[d.week_key].push(d.id);});setDeletedByWeek(dbw);}
         const {data:menu}=await supabase.from("week_menu").select("*");
         if(menu){const m={};menu.forEach(x=>{if(!m[x.week_key])m[x.week_key]={};if(!m[x.week_key][x.day])m[x.week_key][x.day]={};if(!m[x.week_key][x.day][x.slot])m[x.week_key][x.day][x.slot]=[];if(x.recipe_data)m[x.week_key][x.day][x.slot].push(x.recipe_data);});setWeekMenu(m);}
