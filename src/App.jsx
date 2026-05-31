@@ -641,7 +641,7 @@ function ShoppingListPage({weekMenu,recipes,deletedByWeek,setDeletedByWeek,extra
                 <span style={{flex:1,fontSize:13,fontWeight:500,color:checked[item.id]?"#9CA3AF":"#111",textDecoration:checked[item.id]?"line-through":"none",textAlign:"left"}}>
                   {item.name}{item.amounts&&item.amounts.filter(a=>a&&a!=='al gusto'||item.amounts.length===1).length>0&&<span style={{color:"#9CA3AF",fontWeight:400,marginLeft:5}}>({item.amounts.join(', ')})</span>}
                 </span>
-                {checked[item.id]?<button onClick={()=>{supabase.from("shopping_extras").delete().eq("id",String(item.id)).eq("week_key",key).then(()=>{});setExtras(p=>p.filter(i=>i.id!==item.id));setChecked(p=>{const n={...p};delete n[item.id];return n;});}} style={{background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:14}}>🗑️</button>:<button onClick={()=>setEditItem({...item,amount:item.amount||(item.amounts?item.amounts.join(", "):""),unit:item.unit||""})} style={{background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",fontSize:14}}>✏️</button>}
+                {checked[item.id]?<button onClick={()=>{const isExtra=String(item.id).startsWith("ex-");if(isExtra){supabase.from("shopping_extras").delete().eq("id",String(item.id)).then(()=>{});setExtras(p=>p.filter(i=>i.id!==item.id));}else{deleteItem(item.id);}setChecked(p=>{const n={...p};delete n[item.id];return n;});}} style={{background:"none",border:"none",cursor:"pointer",color:"#EF4444",fontSize:14}}>🗑️</button>:<button onClick={()=>setEditItem({...item,amount:item.amount||(item.amounts?item.amounts.join(", "):""),unit:item.unit||""})} style={{background:"none",border:"none",cursor:"pointer",color:"#9CA3AF",fontSize:14}}>✏️</button>}
               </div>
             </div>))}
           </div>
@@ -824,7 +824,7 @@ export default function App(){
   async function saveMenu(newMenu){
     setWeekMenu(newMenu);
     try{
-      await supabase.from("week_menu").delete().neq("id","00000000-0000-0000-0000-000000000000");
+      await supabase.from("week_menu").delete().gte("created_at","2000-01-01");
       const rows=[];
       Object.entries(newMenu).forEach(([wk,days])=>Object.entries(days).forEach(([day,slots])=>Object.entries(slots).forEach(([slot,rs])=>rs.forEach(r=>rows.push({week_key:wk,day,slot,recipe_id:r.id,recipe_data:r})))));
       if(rows.length>0)await supabase.from("week_menu").insert(rows);
